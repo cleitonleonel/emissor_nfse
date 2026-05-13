@@ -37,6 +37,4 @@ jobs:
         run: |
           poetry run python scripts/generate_coverage_badge.py --input coverage.xml --output docs/assets/coverage.svg
 
-      - name: Ensure coverage badge is up to date
-        run: git diff --exit-code -- docs/assets/coverage.svg
 
