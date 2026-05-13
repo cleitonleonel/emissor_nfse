@@ -1,7 +1,7 @@
 # _Emissor_NFSe_
 
 [![CI](https://github.com/cleitonleonel/emissor_nfse/actions/workflows/ci.yml/badge.svg)](https://github.com/cleitonleonel/emissor_nfse/actions/workflows/ci.yml)
-[![Coverage](https://raw.githubusercontent.com/cleitonleonel/emissor_nfse/main/docs/assets/coverage.svg)](https://github.com/cleitonleonel/emissor_nfse/actions/workflows/pages.yml)
+[![codecov](https://raw.githubusercontent.com/cleitonleonel/emissor_nfse/refs/heads/master/docs/assets/coverage.svg)](https://github.com/cleitonleonel/emissor_nfse)
 
 <img src="https://github.com/cleitonleonel/emissor_nfse/blob/master/src/NFS-e.png?raw=true" alt="emissor_nfse" width="200"/>
 
