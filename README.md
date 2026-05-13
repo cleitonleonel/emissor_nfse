@@ -1,7 +1,7 @@
 # _Emissor_NFSe_
 
 [![CI](https://github.com/cleitonleonel/emissor_nfse/actions/workflows/ci.yml/badge.svg)](https://github.com/cleitonleonel/emissor_nfse/actions/workflows/ci.yml)
-[![Codecov](https://codecov.io/gh/cleitonleonel/emissor_nfse/branch/main/graph/badge.svg?token=)](https://codecov.io/gh/cleitonleonel/emissor_nfse)
+[![Coverage](https://raw.githubusercontent.com/cleitonleonel/emissor_nfse/gh-pages/assets/coverage.svg)](https://github.com/cleitonleonel/emissor_nfse/actions/workflows/pages.yml)
 
 <img src="https://github.com/cleitonleonel/emissor_nfse/blob/master/src/NFS-e.png?raw=true" alt="emissor_nfse" width="200"/>
 
@@ -87,7 +87,7 @@ O fluxo do `main.py` é este:
 
 Documentação do projeto (GitHub Pages)
 
-A documentação está disponível na pasta `docs/` deste repositório e será publicada via GitHub Pages quando você fizer push para a branch `main`.
+A documentação está disponível na pasta `docs/` deste repositório e é publicada via GitHub Pages quando você fizer push para a branch `main`.
 
 > Observação: para o workflow de Pages funcionar, habilite GitHub Pages em `Settings > Pages` e selecione a origem de publicação adequada (GitHub Actions ou branch `gh-pages`, conforme sua configuração).
 

@@ -2,6 +2,8 @@
 
 Bem-vindo à documentação do projeto Emissor_NFSe.
 
+[![Coverage](https://raw.githubusercontent.com/cleitonleonel/emissor_nfse/gh-pages/assets/coverage.svg)](https://github.com/cleitonleonel/emissor_nfse/actions/workflows/pages.yml)
+
 Esta documentação cobre:
 
 - Visão geral do projeto
