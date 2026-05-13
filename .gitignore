@@ -1,0 +1,10 @@
+utils
+downloads
+nfse
+certificados
+venv/
+__pycache__/
+.idea
+.env
+.pytest_cache/
+.ruff_cache/
