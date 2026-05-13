@@ -89,6 +89,8 @@ Documentação do projeto (GitHub Pages)
 
 A documentação está disponível na pasta `docs/` deste repositório e será publicada via GitHub Pages quando você fizer push para a branch `main`.
 
+> Observação: para o workflow de Pages funcionar, habilite GitHub Pages em `Settings > Pages` e selecione a origem de publicação adequada (GitHub Actions ou branch `gh-pages`, conforme sua configuração).
+
 - Página principal: `docs/index.md`
  - Guia de uso: `docs/usage.md`
  - Referência da API: `docs/api.md`

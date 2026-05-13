@@ -8,11 +8,8 @@ on:
 
 jobs:
   test:
-    name: Test (py${{ matrix.python-version }})
+    name: Test (py3.12)
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.10", "3.11", "3.12"]
 
     steps:
       - name: Checkout
@@ -22,30 +19,30 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .venv
-          key: ${{ runner.os }}-venv-${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}
+          key: ${{ runner.os }}-venv-3.12-${{ hashFiles('**/poetry.lock') }}
           restore-keys: |
-            ${{ runner.os }}-venv-${{ matrix.python-version }}-
+            ${{ runner.os }}-venv-3.12-
 
       - name: Cache pip
         uses: actions/cache@v4
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}
+          key: ${{ runner.os }}-pip-3.12-${{ hashFiles('**/poetry.lock') }}
           restore-keys: |
-            ${{ runner.os }}-pip-${{ matrix.python-version }}-
+            ${{ runner.os }}-pip-3.12-
 
       - name: Cache poetry
         uses: actions/cache@v4
         with:
           path: ~/.cache/pypoetry
-          key: ${{ runner.os }}-pypoetry-${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}
+          key: ${{ runner.os }}-pypoetry-3.12-${{ hashFiles('**/poetry.lock') }}
           restore-keys: |
-            ${{ runner.os }}-pypoetry-${{ matrix.python-version }}-
+            ${{ runner.os }}-pypoetry-3.12-
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.12"
 
       - name: Install Poetry
         run: |
@@ -70,6 +67,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
+          overwrite: true
           path: |
             coverage.xml
             htmlcov

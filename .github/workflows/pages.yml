@@ -7,22 +7,17 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     permissions:
-      pages: write
-      id-token: write
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Upload docs folder as pages artifact
-        uses: actions/upload-pages-artifact@v3
+      - name: Publish docs to gh-pages branch
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          path: docs
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs
+          publish_branch: gh-pages
+          force_orphan: true
 
