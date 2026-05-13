@@ -1,5 +1,7 @@
 # API — referência rápida do `core`
 
+> Navegação: [Início](index.md) · [Guia de uso](usage.md) · [API](api.md) · [Arquitetura](architecture.md) · [Troubleshooting](troubleshooting.md)
+
 Este documento descreve de forma sucinta as classes e funções mais importantes dentro da pasta `core/`.
 
 ## `core.cliente_http.ClienteHttp`
@@ -11,13 +13,7 @@ Este documento descreve de forma sucinta as classes e funções mais importantes
 
 Context manager que converte um arquivo `.pfx` para dois arquivos PEM temporários (certificado e chave), retornando uma tupla `(caminho_cert_pem, caminho_key_pem)` no `__enter__` e removendo os arquivos no `__exit__`.
 
-Uso típico:
-
-```python
-with GerenciadorCertificadoA1('/caminho/cert.pfx', 'senha') as (cert, key):
-    # use cert/key em requests (param 'cert=(cert, key)')
-    pass
-```
+Uso típico: use `GerenciadorCertificadoA1` com o caminho do `.pfx` e a senha do certificado para obter dois arquivos PEM temporários durante o contexto de uso e passá-los ao cliente HTTP quando necessário.
 
 ## `core.cliente_nfse.ClienteNfseNacional`
 

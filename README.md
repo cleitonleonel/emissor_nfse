@@ -1,7 +1,7 @@
 # _Emissor_NFSe_
 
 [![CI](https://github.com/cleitonleonel/emissor_nfse/actions/workflows/ci.yml/badge.svg)](https://github.com/cleitonleonel/emissor_nfse/actions/workflows/ci.yml)
-[![Coverage](https://raw.githubusercontent.com/cleitonleonel/emissor_nfse/gh-pages/assets/coverage.svg)](https://github.com/cleitonleonel/emissor_nfse/actions/workflows/pages.yml)
+[![Coverage](https://raw.githubusercontent.com/cleitonleonel/emissor_nfse/main/docs/assets/coverage.svg)](https://github.com/cleitonleonel/emissor_nfse/actions/workflows/pages.yml)
 
 <img src="https://github.com/cleitonleonel/emissor_nfse/blob/master/src/NFS-e.png?raw=true" alt="emissor_nfse" width="200"/>
 
@@ -89,11 +89,13 @@ Documentação do projeto (GitHub Pages)
 
 A documentação está disponível na pasta `docs/` deste repositório e é publicada via GitHub Pages quando você fizer push para a branch `main`.
 
-> Observação: para o workflow de Pages funcionar, habilite GitHub Pages em `Settings > Pages` e selecione a origem de publicação adequada (GitHub Actions ou branch `gh-pages`, conforme sua configuração).
+> Observação: para usar a pasta `docs/` como origem do site, habilite GitHub Pages em `Settings > Pages` e selecione a origem `main` + `/docs`.
 
 - Página principal: `docs/index.md`
- - Guia de uso: `docs/usage.md`
- - Referência da API: `docs/api.md`
+- Guia de uso: `docs/usage.md`
+- Referência da API: `docs/api.md`
+- Arquitetura: `docs/architecture.md`
+- Troubleshooting: `docs/troubleshooting.md`
 
 1. Carrega variáveis de ambiente.
 2. Autentica no portal.

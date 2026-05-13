@@ -18,6 +18,7 @@ class EndpointsNfse:
     LOGIN_CERTIFICADO = f"{BASE_URL}/EmissorNacional/Certificado"
     EMISSAO_DPS = f"{BASE_URL}/EmissorNacional/DPS/Pessoas"
     NOTAS_EMITIDAS = f"{BASE_URL}/EmissorNacional/Notas/Emitidas"
+    NOTAS_RECEBIDAS = f"{BASE_URL}/EmissorNacional/Notas/Recebidas"
 
 
 class FalhaAutenticacaoError(Exception):
@@ -51,7 +52,7 @@ class ClienteNfseNacional:
         self.caminho_pfx = caminho_pfx
         self.senha_pfx = senha_pfx
         self._token_csrf: Optional[str] = None
-
+        self._tipo_consulta: Optional[str] = None
         self._preparar_diretorios()
 
     def _preparar_diretorios(self) -> None:
@@ -166,6 +167,7 @@ class ClienteNfseNacional:
         Returns:
             Dict[str, Any]: Dicionário com chaves 'notas' (lista) ou 'erro' (string).
         """
+        self._tipo_consulta = "emitidas"
         params = {}
         if data_inicio and data_fim:
             params = {
@@ -174,6 +176,7 @@ class ClienteNfseNacional:
                 "datafim": data_fim
             }
 
+        self.http.sessao.headers.update({"Referer": EndpointsNfse.NOTAS_EMITIDAS})
         resposta = self.http.enviar_requisicao("GET", EndpointsNfse.NOTAS_EMITIDAS, params=params)
         soup = BeautifulSoup(resposta.content, "html.parser")
         corpo_tabela = soup.find("tbody")
@@ -208,10 +211,68 @@ class ClienteNfseNacional:
 
         return {"notas": dados_notas}
 
+    def listar_notas_recebidas(self, data_inicio: Optional[str] = None, data_fim: Optional[str] = None) -> Dict[
+        str, Any]:
+        """
+        Lista as notas fiscais emitidas contra um cnpj em um determinado período.
+
+        Args:
+            data_inicio (str, opcional): Data inicial formato DD/MM/AAAA.
+            data_fim (str, opcional): Data final formato DD/MM/AAAA.
+
+        Returns:
+            Dict[str, Any]: Dicionário com chaves 'notas' (lista) ou 'erro' (string).
+        """
+        self._tipo_consulta = "recebidas"
+        params = {}
+        if data_inicio and data_fim:
+            params = {
+                "executar": "1",
+                "busca": "",
+                "datainicio": data_inicio,
+                "datafim": data_fim
+            }
+
+        self.http.sessao.headers.update({"Referer": EndpointsNfse.NOTAS_RECEBIDAS})
+        resposta = self.http.enviar_requisicao("GET", EndpointsNfse.NOTAS_RECEBIDAS, params=params)
+        soup = BeautifulSoup(resposta.content, "html.parser")
+        corpo_tabela = soup.find("tbody")
+
+        if not corpo_tabela:
+            msg_erro_padrao = soup.find("span", {"class": "field-validation-error"})
+            msg_sem_registro = soup.find("span", {"class": "sem-registros"})
+
+            mensagem = "Erro desconhecido ao listar notas."
+            if msg_erro_padrao:
+                mensagem = msg_erro_padrao.get_text(strip=True)
+            elif msg_sem_registro:
+                mensagem = msg_sem_registro.get_text(strip=True)
+
+            return {"notas": [], "erro": mensagem}
+
+        linhas = corpo_tabela.find_all("tr")
+        dados_notas = []
+
+        for linha in linhas:
+            div_opcoes = linha.find("div", {"class": "list-group menu-content"})
+            if not div_opcoes:
+                continue
+
+            links = {
+                item.get_text(strip=True).replace(" ", "_").lower(): f"{EndpointsNfse.BASE_URL}{item['href']}"
+                for item in div_opcoes.find_all("a")
+            }
+            links.pop("rejeitar", None)
+            links.pop("confirmar", None)
+            dados_notas.append(links)
+
+        return {"notas": dados_notas}
+
     def _baixar_arquivo(self, url: str, diretorio_destino: str, extensao: str) -> str:
         """Método interno genérico para baixar arquivos com gerenciamento eficiente de memória."""
         nome_arquivo = f"{url.split('/')[-1]}.{extensao}"
-        caminho_completo = Path(diretorio_destino) / nome_arquivo
+        Path(f"{diretorio_destino}/{self._tipo_consulta}").mkdir(parents=True, exist_ok=True)
+        caminho_completo = Path(f"{diretorio_destino}/{self._tipo_consulta}") / nome_arquivo
 
         if extensao == "xml":
             resposta = self.http.enviar_requisicao("GET", url)

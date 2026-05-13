@@ -1,22 +1,38 @@
 # Emissor_NFSe — Documentação
 
-Bem-vindo à documentação do projeto Emissor_NFSe.
+> Navegação: [Início](index.md) · [Guia de uso](usage.md) · [API](api.md) · [Arquitetura](architecture.md) · [Troubleshooting](troubleshooting.md)
 
-[![Coverage](https://raw.githubusercontent.com/cleitonleonel/emissor_nfse/gh-pages/assets/coverage.svg)](https://github.com/cleitonleonel/emissor_nfse/actions/workflows/pages.yml)
+<p align="center">
+  <img src="assets/coverage.svg" alt="Coverage badge" />
+</p>
 
-Esta documentação cobre:
+Esta documentação foi organizada para ajudar você a entender rapidamente o projeto, usar o cliente principal e localizar detalhes técnicos quando necessário.
 
-- Visão geral do projeto
-- Instalação e execução
-- Exemplos de uso
-- Referência rápida das funções/classes centrais
+## O que você encontra aqui
 
-Navegue pelos arquivos nesta pasta para mais detalhes:
+- **Guia de uso**: instalação, configuração e execução
+- **API**: referência rápida das classes e métodos em `core/`
+- **Arquitetura**: visão da estrutura interna do projeto
+- **Troubleshooting**: problemas comuns e como resolver
 
-- `usage.md` — exemplos e how-to
-- `api.md` — referência das APIs internas (`core`)
+## Caminho sugerido de leitura
 
----
+1. Comece por [Guia de uso](usage.md)
+2. Consulte [Arquitetura](architecture.md) para entender o fluxo
+3. Veja [API](api.md) para detalhes de implementação
+4. Use [Troubleshooting](troubleshooting.md) caso encontre erros
 
-Status: O repositório tem integração contínua (CI) e testes. A documentação é publicada via GitHub Pages a partir da pasta `docs/`.
+## Estrutura resumida
+
+- `main.py`: exemplo de execução do fluxo principal
+- `core/`: cliente HTTP, certificado A1 e integração com NFS-e
+- `docs/`: documentação publicada pelo GitHub Pages
+- `tests/`: testes automatizados
+
+## Status do projeto
+
+- integração contínua ativa
+- testes automatizados em `pytest`
+- lint com `ruff`
+- documentação servida diretamente da pasta `docs/`
 

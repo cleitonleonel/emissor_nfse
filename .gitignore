@@ -8,3 +8,6 @@ __pycache__/
 .env
 .pytest_cache/
 .ruff_cache/
+.coverage
+coverage.xml
+htmlcov/

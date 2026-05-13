@@ -16,7 +16,7 @@ def main():
 
     cert_path = None # os.getenv("CERTIFICADO_PATH")
     cert_senha = None # os.getenv("CERTIFICADO_SENHA")
-    
+
     if cert_path is None or cert_senha is None:
         logging.warning("Variáveis de ambiente para certificado não encontradas. Continuando sem certificado.")
 
@@ -36,6 +36,7 @@ def main():
 
         # A partir daqui, a sessão já está com os cookies corretos
         resultado = cliente.listar_notas_emitidas("01/01/2026", "31/01/2026")
+        # resultado = cliente.listar_notas_recebidas("01/01/2026", "31/01/2026")
 
         if "erro" in resultado:
             print("Erro ao buscar notas:", resultado["erro"])

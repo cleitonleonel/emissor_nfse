@@ -1,5 +1,7 @@
 # Guia rápido — Como usar
 
+> Navegação: [Início](index.md) · [Guia de uso](usage.md) · [API](api.md) · [Arquitetura](architecture.md) · [Troubleshooting](troubleshooting.md)
+
 Este documento mostra os passos mais comuns para utilizar o projeto.
 
 ## Instalação
