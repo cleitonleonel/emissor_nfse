@@ -194,6 +194,7 @@ def test_listar_notas_emitidas_parseia_links(tmp_path, monkeypatch):
         {
             "download_xml": f"{EndpointsNfse.BASE_URL}/arquivos/nota123.xml",
             "download_danfs-e": f"{EndpointsNfse.BASE_URL}/arquivos/nota123.pdf",
+            "status_danfs-e": "unknown",
         }
     ]
 
