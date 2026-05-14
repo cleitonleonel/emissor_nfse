@@ -201,12 +201,18 @@ class ClienteNfseNacional:
             if not div_opcoes:
                 continue
 
+            raw_status = linha.get("data-situacao", "unknown")
+            status = raw_status if isinstance(raw_status, str) else str(raw_status)
+
             links = {
                 item.get_text(strip=True).replace(" ", "_").lower(): f"{EndpointsNfse.BASE_URL}{item['href']}"
                 for item in div_opcoes.find_all("a")
             }
+
+            links.update(**{"status_danfs-e": status.split("_")[-1].lower()})
             links.pop("cancelar_nfs-e", None)
             links.pop("substituir", None)
+
             dados_notas.append(links)
 
         return {"notas": dados_notas}
@@ -291,10 +297,12 @@ class ClienteNfseNacional:
 
         return str(caminho_completo)
 
-    def baixar_xml(self, url: str, xml_path: str = "downloads/xmls") -> str:
+    def baixar_xml(self, url: str, status: str, xml_path: str = "downloads/xmls") -> str:
         """Baixa o XML de uma nota e salva no disco."""
+        xml_path = f"{xml_path}/{status}" if status else xml_path
         return self._baixar_arquivo(url, xml_path, "xml")
 
-    def baixar_pdf(self, url: str, pdf_path: str = "downloads/pdfs") -> str:
+    def baixar_pdf(self, url: str, status: str, pdf_path: str = "downloads/pdfs") -> str:
         """Baixa o PDF de uma nota e salva no disco."""
-        return self._baixar_arquivo(url, pdf_path, "pdf")
+        pdf_path = f"{pdf_path}/{status}" if status else pdf_path
+        return self._baixar_arquivo(url, f"{pdf_path}", "pdf")
