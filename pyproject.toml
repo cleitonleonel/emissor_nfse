@@ -39,6 +39,19 @@ dev = [
   "ruff==0.15.12",
 ]
 
+# Some versions of Poetry (and CI images) expect groups to be defined under
+# `tool.poetry.group.<name>.dependencies` for use with `--with <name>`.
+[tool.poetry.group.dev.dependencies]
+coverage = "7.14.0"
+iniconfig = "2.3.0"
+packaging = "26.2"
+pluggy = "1.6.0"
+pycparser = "3.0"
+Pygments = "2.20.0"
+pytest = "8.4.2"
+pytest-cov = "4.1.0"
+ruff = "0.15.12"
+
 [project.scripts]
 emissor-nfse = "main:main"
 

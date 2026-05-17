@@ -47,21 +47,48 @@ jobs:
       - name: Install Poetry
         run: |
           python -m pip install --upgrade pip
+          # Install Poetry (no version pinned so CI can work with any Poetry)
           pip install poetry
+          poetry --version
 
       - name: Install dependencies (including dev)
         run: |
-          # Cria o virtualenv dentro do projeto para que possamos cacheá-lo
-          poetry config virtualenvs.in-project true
-          poetry config virtualenvs.create true
-          poetry install --no-interaction --with dev
+          # Try to install dev dependencies with Poetry (groups). If the Poetry
+          # version in the runner doesn't support `--with <group>`, fall back
+          # to creating a venv and installing editable extras via pip.
+          set -e
+          poetry config virtualenvs.in-project true || true
+          poetry config virtualenvs.create true || true
+
+          if poetry install --no-interaction --with dev; then
+            echo "Poetry install --with dev succeeded"
+          else
+            echo "Poetry install --with dev failed, falling back to pip editable install"
+            python -m venv .venv
+            source .venv/bin/activate
+            python -m pip install --upgrade pip
+            pip install -e '.[dev]'
+          fi
 
       - name: Lint with ruff
-        run: poetry run ruff check .
+        run: |
+          # If a .venv was created (either by Poetry in-project or by our fallback),
+          # activate it so ruff/pytest are available on PATH. Otherwise, use poetry.
+          if [ -f .venv/bin/activate ]; then
+            source .venv/bin/activate
+            ruff check .
+          else
+            poetry run ruff check .
+          fi
 
       - name: Run tests with coverage
         run: |
-          poetry run pytest --cov=core --cov-report=xml:coverage.xml --cov-report=html -q
+          if [ -f .venv/bin/activate ]; then
+            source .venv/bin/activate
+            pytest --cov=core --cov-report=xml:coverage.xml --cov-report=html -q
+          else
+            poetry run pytest --cov=core --cov-report=xml:coverage.xml --cov-report=html -q
+          fi
 
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4
