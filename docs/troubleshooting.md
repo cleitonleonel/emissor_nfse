@@ -4,6 +4,20 @@
 
 Esta página reúne problemas comuns e como resolver.
 
+## O projeto não sobe com Python antigo
+
+O código atual assume `Python 3.11+`. Se você estiver usando uma versão anterior, atualize o interpretador antes de rodar o projeto.
+
+## O `pytest` na raiz falha na coleta
+
+Se você executar apenas `pytest -q`, o coletor pode tentar importar os testes legados em `utils/`, que ainda usam imports antigos como `nfse.*`.
+
+Use a suíte suportada atualmente:
+
+```bash
+pytest -q tests
+```
+
 ## Não consigo autenticar
 
 Verifique:
@@ -29,6 +43,7 @@ Verifique:
 - se o link da nota ainda é válido
 - se o diretório local tem permissão de escrita
 - se o portal retornou erro antes de gerar o download
+- se o `save_path` configurado existe e tem permissão de escrita
 
 ## GitHub Pages não está mostrando a documentação
 
@@ -50,6 +65,16 @@ Sugestões:
 - siga para `usage.md`
 - consulte `api.md` para detalhes de métodos
 - use `architecture.md` para entender o fluxo do projeto
+
+## O caminho do download ficou diferente do esperado
+
+O cliente força `STATUS` e `EXT` na estrutura final de download, mesmo quando essas tags não são informadas em `path_structure`.
+
+Exemplo padrão:
+
+```text
+downloads/<cliente>/<tipo>/<ano>/<mes>/<status>/<ext>/
+```
 
 ## Observação final
 

@@ -1,3 +1,5 @@
+"""Script de exemplo para autenticar no portal e baixar notas via `core`."""
+
 import os
 import logging
 from dotenv import load_dotenv
@@ -14,8 +16,8 @@ def main():
     username = os.getenv("NFSE_USUARIO")
     password = os.getenv("NFSE_SENHA")
 
-    cert_path = None # os.getenv("CERTIFICADO_PATH")
-    cert_senha = None # os.getenv("CERTIFICADO_SENHA")
+    cert_path = None  # os.getenv("CERTIFICADO_PATH")
+    cert_senha = None  # os.getenv("CERTIFICADO_SENHA")
 
     if cert_path is None or cert_senha is None:
         logging.warning("Variáveis de ambiente para certificado não encontradas. Continuando sem certificado.")
@@ -33,6 +35,11 @@ def main():
         # e realizar o POST no formulário de login padrão.
         print("Iniciando login...")
         cliente.autenticar()
+
+        # Exibe o CNPJ autenticado
+        cnpj = cliente.obter_cnpj() or "CNPJ_DESCONHECIDO"
+        print(f"CNPJ autenticado: {cnpj}")
+        print(f"Downloads serão salvos em: downloads/{cnpj}/")
 
         # A partir daqui, a sessão já está com os cookies corretos
         resultado = cliente.listar_notas_emitidas("01/09/2025", "30/09/2025")

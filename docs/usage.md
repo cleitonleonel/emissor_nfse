@@ -6,15 +6,11 @@ Este documento mostra os passos mais comuns para utilizar o projeto.
 
 ## Instalação
 
-Recomenda-se usar Poetry. Instale dependências (incluindo dev):
+Crie um ambiente virtual e instale as dependências do `requirements.txt`:
 
 ```bash
-poetry install --with dev
-```
-
-Ou, se preferir `pip` (modo rápido):
-
-```bash
+python -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
@@ -42,25 +38,30 @@ cliente.autenticar()
 
 ## Executando o exemplo principal
 
-O `main.py` é um exemplo simples que carrega o `.env`, autentica e lista notas de um mês (configurado dentro do próprio arquivo).
+O `main.py` carrega o `.env`, autentica e consulta notas de um período definido no próprio arquivo.
 
 ```bash
-python3 main.py
+python main.py
 ```
 
 ## Testes e lint
 
 ```bash
-poetry run pytest
-poetry run ruff check .
+pytest -q tests
+ruff check .
 ```
+
+> Observação: `pytest` na raiz pode tentar coletar os testes legados em `utils/`, que ainda usam imports antigos. Para a suíte suportada, execute `pytest -q tests`.
 
 ## Downloads
 
-Os arquivos baixados (XML/PDF) são gravados em:
+Os arquivos baixados (XML/PDF) seguem a estrutura configurada no cliente:
 
-- `downloads/xmls`
-- `downloads/pdfs`
+- diretório base (`save_path`)
+- cliente/empresa (`{CLIENTE}` ou `{CNPJ}`)
+- tipo de consulta (`{TIPO}`)
+- ano, mês e status (`{ANO}`, `{MES}`, `{STATUS}`)
+- pasta por extensão (`{EXT}`)
 
-Estes diretórios são criados automaticamente pelo cliente.
+Por padrão, isso gera uma organização equivalente a `downloads/<cliente>/<tipo>/<ano>/<mes>/<status>/<ext>/`.
 

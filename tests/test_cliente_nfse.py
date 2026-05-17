@@ -81,12 +81,7 @@ def _isolar_cwd(tmp_path, monkeypatch):
     return tmp_path
 
 
-def test_inicializa_diretorios_de_download_em_cwd_isolado(tmp_path, monkeypatch):
-    isolated_cwd = _isolar_cwd(tmp_path, monkeypatch)
-    ClienteNfseNacional()
 
-    assert (isolated_cwd / "downloads" / "xmls").is_dir()
-    assert (isolated_cwd / "downloads" / "pdfs").is_dir()
 
 
 def test_autenticar_via_usuario_e_senha(tmp_path, monkeypatch):
@@ -195,6 +190,9 @@ def test_listar_notas_emitidas_parseia_links(tmp_path, monkeypatch):
             "download_xml": f"{EndpointsNfse.BASE_URL}/arquivos/nota123.xml",
             "download_danfs-e": f"{EndpointsNfse.BASE_URL}/arquivos/nota123.pdf",
             "status_danfs-e": "unknown",
+            "valor": "0,00",
+            "data_emissao": "",
+            "numero": ""
         }
     ]
 
@@ -231,6 +229,7 @@ def test_baixar_xml_e_pdf_salva_arquivos(tmp_path, monkeypatch):
         return FakeResponse(text="<root>\n  <item>á</item>\n</root>")
 
     monkeypatch.setattr(cliente.http, "enviar_requisicao", fake_enviar_requisicao)
+    cliente.define_tipo_consulta("emitidas")
 
     caminho_xml = cliente.baixar_xml("https://exemplo.com/documentos/nota123", str(xml_destino))
     caminho_pdf = cliente.baixar_pdf("https://exemplo.com/documentos/nota123", str(pdf_destino))

@@ -2,17 +2,15 @@
 
 > Navegação: [Início](index.md) · [Guia de uso](usage.md) · [API](api.md) · [Arquitetura](architecture.md) · [Troubleshooting](troubleshooting.md)
 
-<p align="center">
-  <img src="assets/coverage.svg" alt="Coverage badge" />
-</p>
+![Coverage badge](assets/coverage.svg)
 
-Esta documentação foi organizada para ajudar você a entender rapidamente o projeto, usar o cliente principal e localizar detalhes técnicos quando necessário.
+Esta documentação foi organizada para ajudar você a entender rapidamente o projeto, executar o cliente principal e localizar detalhes técnicos quando necessário.
 
 ## O que você encontra aqui
 
 - **Guia de uso**: instalação, configuração e execução
 - **API**: referência rápida das classes e métodos em `core/`
-- **Arquitetura**: visão da estrutura interna do projeto
+- **Arquitetura**: visão da estrutura interna atual do projeto
 - **Troubleshooting**: problemas comuns e como resolver
 
 ## Caminho sugerido de leitura
@@ -26,8 +24,10 @@ Esta documentação foi organizada para ajudar você a entender rapidamente o pr
 
 - `main.py`: exemplo de execução do fluxo principal
 - `core/`: cliente HTTP, certificado A1 e integração com NFS-e
+- `utils/`: utilitários e testes manuais/legados
+- `tests/`: suíte automatizada mantida
 - `docs/`: documentação publicada pelo GitHub Pages
-- `tests/`: testes automatizados
+- `scripts/`: scripts auxiliares
 
 ## Status do projeto
 
@@ -35,4 +35,5 @@ Esta documentação foi organizada para ajudar você a entender rapidamente o pr
 - testes automatizados em `pytest`
 - lint com `ruff`
 - documentação servida diretamente da pasta `docs/`
+- runtime alvo em `Python 3.11+`
 

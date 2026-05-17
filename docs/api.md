@@ -8,6 +8,7 @@ Este documento descreve de forma sucinta as classes e funções mais importantes
 
 - Sessão HTTP baseada em `requests.Session` com retries configurados.
 - Método principal: `enviar_requisicao(metodo: str, url: str, **kwargs) -> requests.Response`
+- Centraliza o envio de requisições usadas pelo cliente NFS-e.
 
 ## `core.certificado.GerenciadorCertificadoA1`
 
@@ -19,16 +20,20 @@ Uso típico: use `GerenciadorCertificadoA1` com o caminho do `.pfx` e a senha do
 
 Principais métodos:
 
-- `autenticar()` — tenta autenticar via certificado A1 (se informado) ou via usuário/senha.
-- `listar_notas_emitidas(data_inicio: str, data_fim: str) -> Dict[str, Any]` — retorna `{"notas": [...]} ou {"notas": [], "erro": "mensagem"}`.
-- `baixar_xml(url: str, xml_path: str = "downloads/xmls") -> str` — baixa e salva XML.
-- `baixar_pdf(url: str, pdf_path: str = "downloads/pdfs") -> str` — baixa e salva PDF.
-- `emitir_nota_simples(payload_dados: Dict[str, Any])` — envia um DPS (payload livre) para emissão.
+- `autenticar() -> bool` — autentica via certificado A1 (se informado) ou via usuário/senha.
+- `obter_cnpj() -> Optional[str]` — retorna o CNPJ/CPF detectado após a autenticação.
+- `listar_notas_emitidas(data_inicio: Optional[str] = None, data_fim: Optional[str] = None) -> Dict[str, Any]` — retorna as notas emitidas ou uma estrutura com `erro`.
+- `listar_notas_recebidas(data_inicio: Optional[str] = None, data_fim: Optional[str] = None) -> Dict[str, Any]` — consulta notas recebidas no mesmo formato geral.
+- `baixar_xml(url: str, status: str, data_emissao: Any = None) -> str` — baixa e salva XML com organização por cliente e metadados.
+- `baixar_pdf(url: str, status: str, data_emissao: Any = None) -> str` — baixa e salva PDF com organização por cliente e metadados.
+- `emitir_nota_simples(payload_dados: Dict[str, Any]) -> None` — envia um DPS (payload livre) para emissão.
 
 Notas:
 
 - Os métodos usam `core.cliente_http.ClienteHttp` para as requisições.
-- Os downloads são implementados de forma a consumir memória de forma eficiente (stream para binários).
+- Os downloads são implementados de forma a consumir memória de forma eficiente (stream para binários) e criam a estrutura configurada em `save_path`/`path_structure`.
+- O cliente força `/{STATUS}/{EXT}` na estrutura final quando essas tags não são informadas.
+- O XML é normalizado antes de ser salvo para reduzir espaços extras entre elementos.
 
 ---
 

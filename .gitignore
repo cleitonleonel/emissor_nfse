@@ -1,6 +1,5 @@
 utils
 downloads
-nfse
 certificados
 venv/
 __pycache__/
@@ -12,3 +11,12 @@ __pycache__/
 coverage.xml
 htmlcov/
 docs/assets/coverage.svg
+app.db
+emissor_nfse.db
+../nfse_manager/nfse.db
+server.log
+backend/database.py.bak
+split_css.py
+split_html.py
+split_js.py
+scratch/
