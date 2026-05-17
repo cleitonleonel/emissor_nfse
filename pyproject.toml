@@ -4,7 +4,6 @@ version = "0.1.0"
 description = "Cliente Python para automação do Emissor Nacional de NFS-e"
 readme = "README.md"
 requires-python = ">=3.12,<4.0"
-package-mode = false
 dependencies = [
   "beautifulsoup4==4.14.3",
   "certifi==2026.4.22",
