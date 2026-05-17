@@ -4,8 +4,8 @@ Utiliza apenas a stdlib (xml.etree.ElementTree) — sem dependências extras.
 
 Namespace oficial: http://www.sped.fazenda.gov.br/nfse
 """
-import xml.etree.ElementTree as ET
 import logging
+import xml.etree.ElementTree as ET
 from datetime import datetime
 from typing import Optional, cast
 

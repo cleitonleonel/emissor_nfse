@@ -57,6 +57,11 @@ jobs:
           # version in the runner doesn't support `--with <group>`, fall back
           # to creating a venv and installing editable extras via pip.
           set -e
+          # If pyproject.toml changed since poetry.lock, regenerate lock so
+          # `poetry install` can proceed. This avoids the CI failing when the
+          # lock file is out-of-sync. We tolerate lock failures and rely on the
+          # fallback below.
+          poetry lock --no-interaction || true
           poetry config virtualenvs.in-project true || true
           poetry config virtualenvs.create true || true
 

@@ -1,10 +1,11 @@
-import re
 import logging
+import re
 from pathlib import Path
-from typing import Optional, Dict, Any
-from core.certificado import GerenciadorCertificadoA1
+from typing import Any, Dict, Optional
+
 from bs4 import BeautifulSoup
 
+from core.certificado import GerenciadorCertificadoA1
 from core.cliente_http import ClienteHttp
 
 logger = logging.getLogger(__name__)
@@ -65,7 +66,10 @@ class ClienteNfseNacional:
         self._cnpj_usuario: Optional[str] = None
 
     def _preparar_diretorios(self) -> None:
-        """Cria diretórios base legados; os downloads principais seguem `save_path` e `path_structure`."""
+        """Cria diretórios base legados.
+
+        Os downloads usam `save_path` e `path_structure` configurados.
+        """
         Path("downloads/xmls").mkdir(parents=True, exist_ok=True)
         Path("downloads/pdfs").mkdir(parents=True, exist_ok=True)
 
@@ -98,8 +102,8 @@ class ClienteNfseNacional:
                 perfil_text = perfil.text.strip()
                 logger.info(f"Usuário logado: {perfil_text}")
 
-                # Extrai o CNPJ/CPF do texto do perfil (geralmente está no início ou entre parênteses)
-                # Exemplo: "19495981000113" ou "Empresa (19495981000113)"
+                # Extrai o CNPJ/CPF do texto do perfil (geralmente no início
+                # ou entre parênteses). Ex.: "19495981000113"
 
                 match = re.search(r'\d{11,14}', perfil_text)
                 if match:
@@ -187,8 +191,11 @@ class ClienteNfseNacional:
         )
         logger.info("Solicitação de emissão de NFS-e enviada.")
 
-    def listar_notas_emitidas(self, data_inicio: Optional[str] = None, data_fim: Optional[str] = None) -> Dict[
-        str, Any]:
+    def listar_notas_emitidas(
+        self,
+        data_inicio: Optional[str] = None,
+        data_fim: Optional[str] = None,
+    ) -> Dict[str, Any]:
         """
         Lista as notas fiscais emitidas em um período.
 
@@ -254,10 +261,11 @@ class ClienteNfseNacional:
                 elif txt.isdigit() and len(txt) < 15:
                     numero = txt
 
-            links = {
-                item.get_text(strip=True).replace(" ", "_").lower(): f"{EndpointsNfse.BASE_URL}{item['href']}"
-                for item in div_opcoes.find_all("a")
-            }
+            links = {}
+            base = EndpointsNfse.BASE_URL
+            for item in div_opcoes.find_all("a"):
+                key = item.get_text(strip=True).replace(" ", "_").lower()
+                links[key] = f"{base}{item['href']}"
 
             links.update({
                 "status_danfs-e": status.split("_")[-1].lower(),
@@ -272,8 +280,11 @@ class ClienteNfseNacional:
 
         return {"notas": dados_notas}
 
-    def listar_notas_recebidas(self, data_inicio: Optional[str] = None, data_fim: Optional[str] = None) -> Dict[
-        str, Any]:
+    def listar_notas_recebidas(
+        self,
+        data_inicio: Optional[str] = None,
+        data_fim: Optional[str] = None,
+    ) -> Dict[str, Any]:
         """
         Lista as notas fiscais emitidas contra um cnpj em um determinado período.
         """
@@ -311,7 +322,8 @@ class ClienteNfseNacional:
             if not div_opcoes:
                 continue
 
-            raw_status = linha.get("data-situacao", "SITUACAO_GERADA")  # Fallback para gerada em recebidas
+            raw_status = linha.get("data-situacao", "SITUACAO_GERADA")
+            # Fallback para 'gerada' quando não houver campo explícito
             status = raw_status if isinstance(raw_status, str) else str(raw_status)
 
             colunas = linha.find_all("td")
@@ -328,10 +340,11 @@ class ClienteNfseNacional:
                 elif txt.isdigit() and len(txt) < 15:
                     numero = txt
 
-            links = {
-                item.get_text(strip=True).replace(" ", "_").lower(): f"{EndpointsNfse.BASE_URL}{item['href']}"
-                for item in div_opcoes.find_all("a")
-            }
+            links = {}
+            base = EndpointsNfse.BASE_URL
+            for item in div_opcoes.find_all("a"):
+                key = item.get_text(strip=True).replace(" ", "_").lower()
+                links[key] = f"{base}{item['href']}"
             links.pop("rejeitar", None)
             links.pop("confirmar", None)
 
@@ -349,8 +362,16 @@ class ClienteNfseNacional:
         """Define o tipo de consulta atual."""
         self._tipo_consulta = tipo_consulta
 
-    def _baixar_arquivo(self, url: str, extensao: str, status: str = "", data_emissao: Any = None) -> str:
-        """Baixa XML/PDF e grava em uma estrutura dinâmica por cliente, tipo, data, status e extensão."""
+    def _baixar_arquivo(
+        self,
+        url: str,
+        extensao: str,
+        status: str = "",
+        data_emissao: Any = None,
+    ) -> str:
+        """Baixa XML/PDF e grava em uma estrutura dinâmica por cliente, tipo, data,
+        status e extensão.
+        """
         nome_arquivo = f"{url.split('/')[-1]}.{extensao}"
 
         # Preparação das tags de tempo
@@ -368,9 +389,9 @@ class ClienteNfseNacional:
                         dt = datetime.strptime(data_emissao, "%Y-%m-%d %H:%M:%S")
                     ano, mes, dia = dt.strftime("%Y"), dt.strftime("%m"), dt.strftime("%d")
                 elif hasattr(data_emissao, "strftime"):
-                    ano, mes, dia = (
-                        data_emissao.strftime("%Y"), data_emissao.strftime("%m"), data_emissao.strftime("%d")
-                    )
+                    ano = data_emissao.strftime("%Y")
+                    mes = data_emissao.strftime("%m")
+                    dia = data_emissao.strftime("%d")
             except ValueError:
                 pass
 

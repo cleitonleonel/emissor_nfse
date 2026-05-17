@@ -1,8 +1,10 @@
 """Script de exemplo para autenticar no portal e baixar notas via `core`."""
 
-import os
 import logging
+import os
+
 from dotenv import load_dotenv
+
 from core.cliente_nfse import ClienteNfseNacional
 
 # Carrega as variáveis de ambiente do arquivo .env
@@ -20,7 +22,7 @@ def main():
     cert_senha = None  # os.getenv("CERTIFICADO_SENHA")
 
     if cert_path is None or cert_senha is None:
-        logging.warning("Variáveis de ambiente para certificado não encontradas. Continuando sem certificado.")
+        logging.warning("Variáveis para certificado não encontradas; seguindo sem certificado.")
 
     # Instancia a classe passando APENAS o usuário (CNPJ/CPF) e a senha.
     cliente = ClienteNfseNacional(

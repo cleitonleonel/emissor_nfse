@@ -1,5 +1,5 @@
-import requests
 import pytest
+import requests
 
 from core.cliente_http import ClienteHttp
 

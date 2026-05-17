@@ -47,27 +47,30 @@ def build_svg(percent_text: str, color: str) -> str:
     label_width = 70
     value_width = 54
     width = label_width + value_width
-
-    return f"""<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{width}\" height=\"20\" role=\"img\" aria-label=\"coverage: {percent_text}\">
-  <title>coverage: {percent_text}</title>
-  <linearGradient id=\"s\" x2=\"0\" y2=\"100%\">
-    <stop offset=\"0\" stop-color=\"#bbb\" stop-opacity=\".1\"/>
-    <stop offset=\"1\" stop-opacity=\".1\"/>
-  </linearGradient>
-  <clipPath id=\"r\">
-    <rect width=\"{width}\" height=\"20\" rx=\"3\" fill=\"#fff\"/>
-  </clipPath>
-  <g clip-path=\"url(#r)\">
-    <rect width=\"{label_width}\" height=\"20\" fill=\"#555\"/>
-    <rect x=\"{label_width}\" width=\"{value_width}\" height=\"20\" fill=\"{color}\"/>
-    <rect width=\"{width}\" height=\"20\" fill=\"url(#s)\"/>
-  </g>
-  <g fill=\"#fff\" text-anchor=\"middle\" font-family=\"Verdana,Geneva,DejaVu Sans,sans-serif\" font-size=\"11\">
-    <text x=\"35\" y=\"14\">{label}</text>
-    <text x=\"97\" y=\"14\">{percent_text}</text>
-  </g>
-</svg>
-"""
+    svg_lines = [
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" '
+        f'height="20" role="img" aria-label="coverage: {percent_text}">',
+        f"  <title>coverage: {percent_text}</title>",
+        '  <linearGradient id="s" x2="0" y2="100%">',
+        '    <stop offset="0" stop-color="#bbb" stop-opacity=".1"/>',
+        '    <stop offset="1" stop-opacity=".1"/>',
+        '  </linearGradient>',
+        '  <clipPath id="r">',
+        f'    <rect width="{width}" height="20" rx="3" fill="#fff"/>',
+        '  </clipPath>',
+        '  <g clip-path="url(#r)">',
+        f'    <rect width="{label_width}" height="20" fill="#555"/>',
+        f'    <rect x="{label_width}" width="{value_width}" height="20" fill="{color}"/>',
+        f'    <rect width="{width}" height="20" fill="url(#s)"/>',
+        '  </g>',
+        '  <g fill="#fff" text-anchor="middle" '
+        'font-family="Verdana,Geneva,DejaVu Sans,sans-serif" font-size="11">',
+        '    <text x="35" y="14">{label}</text>'.format(label=label),
+        '    <text x="97" y="14">{percent}</text>'.format(percent=percent_text),
+        '  </g>',
+        '</svg>',
+    ]
+    return "\n".join(svg_lines)
 
 
 def generate_badge(xml_path: Path, output_path: Path) -> Path:
@@ -82,7 +85,11 @@ def generate_badge(xml_path: Path, output_path: Path) -> Path:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input", default="coverage.xml", help="Path to coverage.xml")
-    parser.add_argument("--output", default="docs/assets/coverage.svg", help="Where to write the SVG badge")
+    parser.add_argument(
+        "--output",
+        default="docs/assets/coverage.svg",
+        help="Output path for the SVG badge",
+    )
     return parser.parse_args()
 
 

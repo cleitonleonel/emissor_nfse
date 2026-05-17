@@ -1,7 +1,8 @@
 import logging
-import urllib3
+from typing import Any, Dict
+
 import requests
-from typing import Dict, Any
+import urllib3
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 

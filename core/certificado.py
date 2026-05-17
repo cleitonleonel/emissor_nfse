@@ -1,10 +1,11 @@
 import os
 import tempfile
 from typing import Tuple
+
 from cryptography.hazmat.primitives.serialization import (
     Encoding,
-    PrivateFormat,
     NoEncryption,
+    PrivateFormat,
 )
 from cryptography.hazmat.primitives.serialization.pkcs12 import load_key_and_certificates
 
@@ -47,7 +48,8 @@ class GerenciadorCertificadoA1:
             NoEncryption(),
         )
 
-        # Utiliza delete=False para que o 'requests' consiga ler, mas garantimos a exclusão no __exit__
+        # Usa delete=False para que requests consiga abrir o arquivo;
+        # a remoção é garantida no __exit__.
         with tempfile.NamedTemporaryFile(delete=False, suffix=".pem") as cert_temp:
             cert_temp.write(bytes_cert)
             self.caminho_cert_pem = cert_temp.name

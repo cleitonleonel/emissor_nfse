@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from core.cliente_nfse import ClienteNfseNacional, EndpointsNfse
 import core.cliente_nfse as cliente_nfse_module
+from core.cliente_nfse import ClienteNfseNacional, EndpointsNfse
 
 
 class FakeResponse:
@@ -138,7 +138,11 @@ def test_autenticar_via_certificado(tmp_path, monkeypatch):
         def __exit__(self, exc_type, exc_val, exc_tb):
             return False
 
-    monkeypatch.setattr(cliente_nfse_module, "GerenciadorCertificadoA1", FakeGerenciadorCertificadoA1)
+    monkeypatch.setattr(
+        cliente_nfse_module,
+        "GerenciadorCertificadoA1",
+        FakeGerenciadorCertificadoA1,
+    )
 
     cliente = ClienteNfseNacional(caminho_pfx="/caminho/certificado.pfx", senha_pfx="senha-cert")
     chamadas = []
