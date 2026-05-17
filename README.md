@@ -1,11 +1,23 @@
 # _Emissor_NFSe_
 
-[![CI](https://github.com/cleitonleonel/emissor_nfse/actions/workflows/ci.yml/badge.svg)](https://github.com/cleitonleonel/emissor_nfse/actions/workflows/ci.yml)
-[![coverage](https://raw.githubusercontent.com/cleitonleonel/emissor_nfse/refs/heads/main/docs/assets/coverage.svg)](https://github.com/cleitonleonel/emissor_nfse)
 
-<img src="https://github.com/cleitonleonel/emissor_nfse/blob/main/src/NFS-e.png?raw=true" alt="emissor_nfse" width="200"/>
+<p align="center">
+  <a href="https://github.com/cleitonleonel/emissor_nfse">
+    <img src="https://github.com/cleitonleonel/emissor_nfse/blob/master/src/logo_nfse.png?raw=true" alt="SmartBot logo" width="45%" height="auto">
+  </a>
+</p>
 
-Cliente Python para automatizar o uso do **Emissor Nacional de NFS-e** (Notas Fiscais de Serviço Eletrônicas).
+<p align="center">
+  <i>Cliente Python para automatizar o uso do Emissor Nacional de NFS-e (Notas Fiscais de Serviço Eletrônicas).</i>
+</p>
+
+<p align="center">
+<a href="https://github.com/cleitonleonel/emissor_nfse">
+  <img src="https://img.shields.io/badge/python-3.12%20%7C%203.13-green" alt="Supported Python Versions"/>
+  <img src="https://github.com/cleitonleonel/emissor_nfse/actions/workflows/ci.yml/badge.svg" alt="Supported Python Versions"/>
+  <img src="https://raw.githubusercontent.com/cleitonleonel/emissor_nfse/refs/heads/master/docs/assets/coverage.svg" alt="Test Coverage"/>
+</a>
+</p>
 
 ## O que o projeto faz
 

@@ -65,8 +65,8 @@ jobs:
           poetry config virtualenvs.in-project true || true
           poetry config virtualenvs.create true || true
 
-          if poetry install --no-interaction --with dev; then
-            echo "Poetry install --with dev succeeded"
+          if poetry install --no-interaction --with dev --no-root; then
+            echo "Poetry install --with dev (no-root) succeeded"
           else
             echo "Poetry install --with dev failed, falling back to pip editable install"
             python -m venv .venv
