@@ -6,12 +6,22 @@ Este documento mostra os passos mais comuns para utilizar o projeto.
 
 ## Instalação
 
-Crie um ambiente virtual e instale as dependências do `requirements.txt`:
+Crie um ambiente virtual e escolha uma das formas de instalação abaixo.
+
+### Via `requirements.txt`
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+```
+
+### Via `pyproject.toml`
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -e .[dev]
 ```
 
 ## Configuração (variáveis de ambiente)
@@ -47,11 +57,11 @@ python main.py
 ## Testes e lint
 
 ```bash
-pytest -q tests
+pytest -q
 ruff check .
 ```
 
-> Observação: `pytest` na raiz pode tentar coletar os testes legados em `utils/`, que ainda usam imports antigos. Para a suíte suportada, execute `pytest -q tests`.
+> Se preferir, você também pode executar explicitamente `pytest -q tests`.
 
 ## Downloads
 

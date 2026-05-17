@@ -7,7 +7,7 @@ name = "emissor_nfse"
 version = "0.1.0"
 description = "Cliente Python para automação do Emissor Nacional de NFS-e"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.12,<4.0"
 dependencies = [
   "beautifulsoup4==4.14.3",
   "certifi==2026.4.22",
@@ -18,7 +18,7 @@ dependencies = [
   "lxml==6.1.0",
   "openpyxl",
   "python-dotenv==1.2.2",
-  "reportlab",
+  "reportlab==4.5.1",
   "requests==2.34.0",
   "signxml==4.4.0",
   "soupsieve==2.8.3",

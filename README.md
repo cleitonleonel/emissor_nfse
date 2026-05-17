@@ -27,6 +27,7 @@ Cliente Python para automatizar o uso do **Emissor Nacional de NFS-e** (Notas Fi
 - `scripts/`: scripts auxiliares
 - `downloads/`: saída padrão dos arquivos baixados
 - `certificados/`: certificados locais usados em testes/execução manual
+- `pyproject.toml`: metadados do projeto, configuração do `pytest` e do `ruff`
 
 > **Importante:** este repositório atual é centrado no pacote `core/` e no script `main.py`. As instruções abaixo refletem essa estrutura real.
 
@@ -39,12 +40,26 @@ Cliente Python para automatizar o uso do **Emissor Nacional de NFS-e** (Notas Fi
 
 ## Instalação
 
+Você pode instalar pelas dependências fixadas em `requirements.txt` ou pelo `pyproject.toml`.
+
+### Com `requirements.txt`
+
 ```bash
 git clone https://github.com/cleitonleonel/emissor_nfse.git
 cd emissor_nfse
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+```
+
+### Com `pyproject.toml`
+
+```bash
+git clone https://github.com/cleitonleonel/emissor_nfse.git
+cd emissor_nfse
+python -m venv .venv
+source .venv/bin/activate
+pip install -e .[dev]
 ```
 
 ## Configuração
@@ -113,11 +128,11 @@ Se `path_structure` não informar `STATUS` ou `EXT`, o cliente os adiciona autom
 O projeto usa `pytest` para testes e `ruff` para lint.
 
 ```bash
-pytest -q tests
+pytest -q
 ruff check .
 ```
 
-> Observação: `pytest -q` na raiz pode tentar coletar os testes legados em `utils/`, que ainda usam imports antigos. A suíte suportada atualmente é `tests/`.
+> Se você quiser executar apenas a suíte principal explicitamente, `pytest -q tests` também funciona.
 
 ## Documentação
 

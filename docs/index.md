@@ -28,6 +28,7 @@ Esta documentação foi organizada para ajudar você a entender rapidamente o pr
 - `tests/`: suíte automatizada mantida
 - `docs/`: documentação publicada pelo GitHub Pages
 - `scripts/`: scripts auxiliares
+- `pyproject.toml`: configuração de empacotamento, `pytest` e `ruff`
 
 ## Status do projeto
 

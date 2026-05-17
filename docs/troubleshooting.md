@@ -8,11 +8,11 @@ Esta página reúne problemas comuns e como resolver.
 
 O código atual assume `Python 3.11+`. Se você estiver usando uma versão anterior, atualize o interpretador antes de rodar o projeto.
 
-## O `pytest` na raiz falha na coleta
+## O `pytest` na raiz
 
-Se você executar apenas `pytest -q`, o coletor pode tentar importar os testes legados em `utils/`, que ainda usam imports antigos como `nfse.*`.
+A configuração atual do `pyproject.toml` limita a coleta à pasta `tests/`, então `pytest -q` deve funcionar na raiz do projeto.
 
-Use a suíte suportada atualmente:
+Se quiser executar explicitamente a suíte principal, use:
 
 ```bash
 pytest -q tests

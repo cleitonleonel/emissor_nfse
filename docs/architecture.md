@@ -13,6 +13,7 @@ O repositório está organizado em cinco áreas principais:
 - `utils/`: ferramentas auxiliares e testes manuais/legados
 - `tests/`: suíte automatizada mantida
 - `docs/`: documentação pública do projeto
+- `pyproject.toml`: configuração de empacotamento e ferramentas de qualidade
 
 ## Fluxo principal
 
@@ -68,6 +69,6 @@ emissor_nfse/
 
 - O portal do governo pode mudar HTML e rotas sem aviso.
 - Sempre valide autenticação e consultas após mudanças no portal.
-- A suíte automatizada atualmente suportada fica em `tests/`; os arquivos em `utils/` são auxiliares e incluem testes legados.
+- A suíte automatizada principal é configurada no `pyproject.toml` e roda na raiz com `pytest -q`.
 - A documentação publicada em GitHub Pages usa os arquivos da pasta `docs/`.
 
