@@ -56,20 +56,21 @@ jobs:
           # Remove cached .venv to avoid Poetry confusion from old metadata
           rm -rf .venv || true
 
+      - name: Clear Poetry cache
+        run: |
+          # Clear Poetry's own cache to ensure it doesn't have stale package info
+          poetry cache clear . --all || true
+
       - name: Install dependencies (including dev)
         run: |
           # Try to install dev dependencies with Poetry (groups). If the Poetry
           # version in the runner doesn't support `--with <group>`, fall back
           # to creating a venv and installing editable extras via pip.
           set -e
-          # If pyproject.toml changed since poetry.lock, regenerate lock so
-          # `poetry install` can proceed. This avoids the CI failing when the
-          # lock file is out-of-sync. We tolerate lock failures and rely on the
-          # fallback below.
-          poetry lock --no-interaction || true
           poetry config virtualenvs.in-project true || true
           poetry config virtualenvs.create true || true
-
+          # Always use --no-root to avoid attempting to install the project as a package.
+          # Dev dependencies are available via --with dev group.
           if poetry install --no-interaction --with dev --no-root; then
             echo "Poetry install --with dev (no-root) succeeded"
           else
