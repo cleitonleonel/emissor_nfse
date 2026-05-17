@@ -56,10 +56,6 @@ jobs:
           # Remove cached .venv to avoid Poetry confusion from old metadata
           rm -rf .venv || true
 
-      - name: Clear Poetry cache
-        run: |
-          # Clear Poetry's own cache to ensure it doesn't have stale package info
-          poetry cache clear . --all || true
 
       - name: Install dependencies (including dev)
         run: |
