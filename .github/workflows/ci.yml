@@ -51,6 +51,11 @@ jobs:
           pip install poetry
           poetry --version
 
+      - name: Clear old virtualenv cache
+        run: |
+          # Remove cached .venv to avoid Poetry confusion from old metadata
+          rm -rf .venv || true
+
       - name: Install dependencies (including dev)
         run: |
           # Try to install dev dependencies with Poetry (groups). If the Poetry
