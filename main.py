@@ -21,8 +21,8 @@ def main():
     cert_path = None  # os.getenv("CERTIFICADO_PATH")
     cert_senha = None  # os.getenv("CERTIFICADO_SENHA")
 
-    if cert_path is None or cert_senha is None:
-        logging.warning("Variáveis para certificado não encontradas; seguindo sem certificado.")
+    """if cert_path is None or cert_senha is None:
+        logging.warning("Variáveis para certificado não encontradas; seguindo sem certificado.")"""
 
     # Instancia a classe passando APENAS o usuário (CNPJ/CPF) e a senha.
     cliente = ClienteNfseNacional(
@@ -53,11 +53,12 @@ def main():
             print(f"Foram encontradas {len(resultado['notas'])} notas emitidas.")
             for nota in resultado["notas"]:
                 situacao = nota.get("status_danfs-e")
+                data_emissao = nota.get("data_emissao")
                 if nota.get("download_xml"):
-                    caminho = cliente.baixar_xml(nota["download_xml"], situacao)
+                    caminho = cliente.baixar_xml(nota["download_xml"], situacao, data_emissao)
                     print(f"XML Salvo em: {caminho}")
                 if nota.get("download_danfs-e"):
-                    caminho = cliente.baixar_pdf(nota["download_danfs-e"], situacao)
+                    caminho = cliente.baixar_pdf(nota["download_danfs-e"], situacao, data_emissao)
                     print(f"PDF Salvo em: {caminho}")
 
     except Exception as e:
