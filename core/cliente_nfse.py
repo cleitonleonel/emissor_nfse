@@ -841,62 +841,62 @@ class ClienteNfseNacional:
 
     def baixar_pdf(self, url: str, status: str, data_emissao: Any = None) -> str:
         """Baixa o PDF de uma nota e salva no disco usando a estrutura configurada."""
+        chave = url.split("/")[-1]
+        nome_arquivo = f"{chave}.pdf"
+
+        ano, mes, dia = "0000", "00", "00"
+        if data_emissao:
+            try:
+                if isinstance(data_emissao, str):
+                    from datetime import datetime
+                    if "T" in data_emissao:
+                        dt = datetime.fromisoformat(data_emissao.replace("Z", "+00:00"))
+                    elif "/" in data_emissao:
+                        dt = datetime.strptime(data_emissao, "%d/%m/%Y")
+                    else:
+                        dt = datetime.strptime(data_emissao, "%Y-%m-%d %H:%M:%S")
+                    ano, mes, dia = dt.strftime("%Y"), dt.strftime("%m"), dt.strftime("%d")
+                elif hasattr(data_emissao, "strftime"):
+                    ano = data_emissao.strftime("%Y")
+                    mes = data_emissao.strftime("%m")
+                    dia = data_emissao.strftime("%d")
+            except Exception:
+                pass
+
+        tags = {
+            "{ANO}": ano,
+            "{MES}": mes,
+            "{DIA}": dia,
+            "{CLIENTE}": self.razao_social or self._cnpj_usuario or "CLIENTE_DESCONHECIDO",
+            "{CNPJ}": self._cnpj_usuario or "00000000000000",
+            "{TIPO}": self._tipo_consulta or "outros",
+            "{STATUS}": (status or "gerada").lower(),
+            "{EXT}": "pdfs"
+        }
+
+        estrutura = self.path_structure
+        if "{TIPO}" not in estrutura:
+            estrutura += "/{TIPO}"
+        if "{STATUS}" not in estrutura:
+            estrutura += "/{STATUS}"
+        if "{EXT}" not in estrutura:
+            estrutura += "/{EXT}"
+
+        caminho_relativo = estrutura
+        for tag, val in tags.items():
+            caminho_relativo = caminho_relativo.replace(tag, val)
+
+        caminho_final = Path(self.save_path)
+        for part in [p for p in caminho_relativo.replace("\\", "/").split("/") if p.strip()]:
+            caminho_final = caminho_final / part
+
+        caminho_final.mkdir(parents=True, exist_ok=True)
+        caminho_completo = caminho_final / nome_arquivo
+
+        # Se tiver certificado, tenta ADN
         if self.caminho_pfx and self.senha_pfx:
-            chave = url.split("/")[-1]
             adn_pdf_url = f"{EndpointsNfse.ADN_BASE_URL}/danfse/{chave}"
             logger.info(f"Baixando PDF via ADN: {adn_pdf_url}")
-
-            nome_arquivo = f"{chave}.pdf"
-
-            ano, mes, dia = "0000", "00", "00"
-            if data_emissao:
-                try:
-                    if isinstance(data_emissao, str):
-                        from datetime import datetime
-                        if "T" in data_emissao:
-                            dt = datetime.fromisoformat(data_emissao.replace("Z", "+00:00"))
-                        elif "/" in data_emissao:
-                            dt = datetime.strptime(data_emissao, "%d/%m/%Y")
-                        else:
-                            dt = datetime.strptime(data_emissao, "%Y-%m-%d %H:%M:%S")
-                        ano, mes, dia = dt.strftime("%Y"), dt.strftime("%m"), dt.strftime("%d")
-                    elif hasattr(data_emissao, "strftime"):
-                        ano = data_emissao.strftime("%Y")
-                        mes = data_emissao.strftime("%m")
-                        dia = data_emissao.strftime("%d")
-                except Exception:
-                    pass
-
-            tags = {
-                "{ANO}": ano,
-                "{MES}": mes,
-                "{DIA}": dia,
-                "{CLIENTE}": self.razao_social or self._cnpj_usuario or "CLIENTE_DESCONHECIDO",
-                "{CNPJ}": self._cnpj_usuario or "00000000000000",
-                "{TIPO}": self._tipo_consulta or "outros",
-                "{STATUS}": (status or "gerada").lower(),
-                "{EXT}": "pdfs"
-            }
-
-            estrutura = self.path_structure
-            if "{TIPO}" not in estrutura:
-                estrutura += "/{TIPO}"
-            if "{STATUS}" not in estrutura:
-                estrutura += "/{STATUS}"
-            if "{EXT}" not in estrutura:
-                estrutura += "/{EXT}"
-
-            caminho_relativo = estrutura
-            for tag, val in tags.items():
-                caminho_relativo = caminho_relativo.replace(tag, val)
-
-            caminho_final = Path(self.save_path)
-            for part in [p for p in caminho_relativo.replace("\\", "/").split("/") if p.strip()]:
-                caminho_final = caminho_final / part
-
-            caminho_final.mkdir(parents=True, exist_ok=True)
-            caminho_completo = caminho_final / nome_arquivo
-
             try:
                 resposta = self._requisicao_adn("GET", adn_pdf_url, stream=True)
                 with open(caminho_completo, "wb") as f:
@@ -908,4 +908,36 @@ class ClienteNfseNacional:
                 logger.error(f"Erro ao baixar PDF da ADN: {e}")
                 pass
 
-        return self._baixar_arquivo(url, "pdf", status, data_emissao)
+        # Baixa arquivo normal (via portal)
+        resultado_download = self._baixar_arquivo(url, "pdf", status, data_emissao)
+        
+        # Se falhou ou retornou HTML (ex: captcha) e temos o XML, gera offline!
+        if not resultado_download or resultado_download.lower().endswith(".html"):
+            # Calcula caminho do XML correspondente
+            xml_tags = dict(tags)
+            xml_tags["{EXT}"] = "xmls"
+            xml_rel = estrutura
+            for tag, val in xml_tags.items():
+                xml_rel = xml_rel.replace(tag, val)
+            
+            caminho_xml_dir = Path(self.save_path)
+            for part in [p for p in xml_rel.replace("\\", "/").split("/") if p.strip()]:
+                caminho_xml_dir = caminho_xml_dir / part
+            
+            caminho_xml = caminho_xml_dir / f"{chave}.xml"
+            if caminho_xml.exists():
+                logger.info(
+                    f"Download do PDF oficial falhou ou foi bloqueado. "
+                    f"Gerando PDF offline a partir do XML local: {caminho_xml}"
+                )
+                from core.danfse_generator import DanfseGenerator
+                try:
+                    generator = DanfseGenerator(str(caminho_xml), status=status)
+                    generator.gerar_pdf(str(caminho_completo))
+                    logger.info(f"PDF gerado offline com sucesso em: {caminho_completo}")
+                    return str(caminho_completo)
+                except Exception as ex:
+                    logger.error(f"Erro ao gerar PDF offline: {ex}")
+        
+        return resultado_download
+

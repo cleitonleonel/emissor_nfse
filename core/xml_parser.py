@@ -84,7 +84,8 @@ def extrair_dados_nfse(xml_path: str) -> dict:
         return {}
 
     # Navega até o nó raiz infNFSe (pode ser diretamente ou dentro de NFSe)
-    inf = cast(ET.Element, root.find("nfse:infNFSe", NS) or root)
+    inf_el = root.find("nfse:infNFSe", NS)
+    inf = cast(ET.Element, inf_el if inf_el is not None else root)
 
     # Extrai o atributo Id da chave da nota
     chave = inf.get("Id", "").replace("NFS", "") if inf is not None else None

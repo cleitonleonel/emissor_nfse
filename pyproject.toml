@@ -20,6 +20,8 @@ dependencies = [
   "soupsieve==2.8.3",
   "typing_extensions==4.15.0",
   "urllib3==2.7.0",
+  "fpdf2 (>=2.8.7,<3.0.0)",
+  "qrcode (>=8.2,<9.0)",
 ]
 
 [project.optional-dependencies]
