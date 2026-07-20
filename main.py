@@ -18,11 +18,11 @@ def main():
     username = os.getenv("NFSE_USUARIO")
     password = os.getenv("NFSE_SENHA")
 
-    cert_path = None  # os.getenv("CERTIFICADO_PATH")
-    cert_senha = None  # os.getenv("CERTIFICADO_SENHA")
+    cert_path = os.getenv("CERTIFICADO_PATH")
+    cert_senha = os.getenv("CERTIFICADO_SENHA")
 
-    """if cert_path is None or cert_senha is None:
-        logging.warning("Variáveis para certificado não encontradas; seguindo sem certificado.")"""
+    if not cert_path or not cert_senha:
+        logging.warning("Variáveis para certificado não encontradas; seguindo sem certificado.")
 
     # Instancia a classe passando APENAS o usuário (CNPJ/CPF) e a senha.
     cliente = ClienteNfseNacional(
@@ -36,7 +36,7 @@ def main():
         # O método autenticar vai pular a lógica de certificado
         # e realizar o POST no formulário de login padrão.
         print("Iniciando login...")
-        cliente.autenticar()
+        cliente.autenticar(usar_certificado=False)
 
         # Exibe o CNPJ autenticado
         cnpj = cliente.obter_cnpj() or "CNPJ_DESCONHECIDO"
@@ -44,7 +44,7 @@ def main():
         print(f"Downloads serão salvos em: downloads/{cnpj}/")
 
         # A partir daqui, a sessão já está com os cookies corretos
-        resultado = cliente.listar_notas_emitidas("01/09/2025", "30/09/2025")
+        resultado = cliente.listar_notas_emitidas("01/09/2025", "30/09/2025", usar_adn=False)
         # resultado = cliente.listar_notas_recebidas("01/01/2026", "31/01/2026")
 
         if "erro" in resultado:

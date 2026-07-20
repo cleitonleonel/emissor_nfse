@@ -158,7 +158,7 @@ def test_autenticar_via_certificado(tmp_path, monkeypatch):
         "caminho_pfx": "/caminho/certificado.pfx",
         "senha_pfx": "senha-cert",
     }
-    assert chamadas[0][0] == "POST"
+    assert chamadas[0][0] == "GET"
     assert chamadas[0][1] == EndpointsNfse.LOGIN_CERTIFICADO
     assert chamadas[0][2]["cert"] == ("/tmp/cert.pem", "/tmp/key.pem")
 

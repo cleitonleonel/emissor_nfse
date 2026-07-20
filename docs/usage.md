@@ -75,3 +75,11 @@ Os arquivos baixados (XML/PDF) seguem a estrutura configurada no cliente:
 
 Por padrão, isso gera uma organização equivalente a `downloads/<cliente>/<tipo>/<ano>/<mes>/<status>/<ext>/`.
 
+### Automação via ADN (Ambiente de Distribuição Nacional)
+
+Se o cliente for instanciado com o caminho e senha do Certificado Digital A1 (`caminho_pfx` e `senha_pfx`), a listagem e os downloads serão direcionados automaticamente para a API oficial do ADN (`adn.nfse.gov.br`). Isso garante maior velocidade e resiliência, pois evita o scraping do portal web e obtém diretamente os arquivos XML (lote de DFe) e PDF.
+
+### Mecanismo de Fallback para PDF
+
+Se o download do PDF oficial falhar (por exemplo, retornando um status HTTP 403 Forbidden), o cliente tentará recuperar o HTML da página de impressão correspondente à chave de 44 dígitos da nota fiscal. Caso tenha sucesso, salvará esse arquivo com a extensão `.html` no mesmo diretório de destino, garantindo que o usuário possua a representação visual da nota.
+

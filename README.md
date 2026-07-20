@@ -22,9 +22,10 @@
 ## O que o projeto faz
 
 - autenticação no portal com **usuário/senha**
-- autenticação com **certificado digital A1** (`.pfx`)
-- consulta de **notas emitidas** e **notas recebidas**
-- download de **XML** e **PDF/DANFS-e**
+- autenticação com **certificado digital A1** (`.pfx`) via subdomínio oficial
+- consulta de **notas emitidas** e **notas recebidas** (com suporte à API do **Ambiente de Distribuição Nacional - ADN**)
+- download de **XML** e **PDF/DANFS-e** (com download via ADN se o certificado digital estiver ativo)
+- mecanismo de **fallback para HTML de impressão** se o download do PDF retornar 403 ou falhar
 - organização dos arquivos por **cliente, tipo, ano, mês, status e extensão**
 - conversão temporária e segura de PFX para PEM
 - testes automatizados com `pytest` e lint com `ruff`
