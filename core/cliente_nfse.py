@@ -540,7 +540,7 @@ class ClienteNfseNacional:
             colunas = linha.find_all("td")
             data_emissao = ""
             numero = ""
-            
+
             valor = linha.get("data-valor")
             if not valor:
                 col_valor = linha.find("td", {"class": "td-valor"})
@@ -630,7 +630,7 @@ class ClienteNfseNacional:
             colunas = linha.find_all("td")
             data_emissao = ""
             numero = ""
-            
+
             valor = linha.get("data-valor")
             if not valor:
                 col_valor = linha.find("td", {"class": "td-valor"})
@@ -758,6 +758,26 @@ class ClienteNfseNacional:
                         chave_nota = url.split("/")[-1]
                         logger.info(
                             f"Recuperando HTML de impressão para chave (fallback): {chave_nota}"
+                        )
+                        html_content = self.obter_impressao_html(chave_nota)
+                        if html_content:
+                            caminho_html = caminho_completo.with_suffix(".html")
+                            caminho_html.write_text(html_content, encoding="utf-8")
+                            logger.info(f"HTML de impressão salvo em: {caminho_html}")
+                            return str(caminho_html)
+                    raise e
+                try:
+                    resposta = self.http.enviar_requisicao("GET", url, stream=True)
+                    with open(caminho_completo, "wb") as f:
+                        for chunk in resposta.iter_content(chunk_size=8192):
+                            f.write(chunk)
+                except Exception as e:
+                    # Fallback for PDF download on 403 / failure
+                    if extensao.lower() == "pdf":
+                        chave_nota = url.split("/")[-1]
+                        logger.info(
+                            f"Falha ao baixar PDF oficial. "
+                            f"Tentando recuperar HTML de impressão para chave: {chave_nota}"
                         )
                         html_content = self.obter_impressao_html(chave_nota)
                         if html_content:
