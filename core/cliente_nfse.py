@@ -749,7 +749,10 @@ class ClienteNfseNacional:
                     or conteudo.lower().startswith("<!doctype")
                     or not (conteudo.startswith("<") or conteudo.startswith("<?xml"))
                 ):
-                    logger.warning("Download de XML exige resolução de Captcha no portal. Retornando vazio.")
+                    logger.warning(
+                        "Download de XML exige resolução de Captcha. "
+                        "Retornando vazio."
+                    )
                     return ""
                 
                 conteudo_xml = re.sub(r">\s+<", "><", conteudo)
