@@ -76,6 +76,16 @@ Exemplo padrão:
 downloads/<cliente>/<tipo>/<ano>/<mes>/<status>/<ext>/
 ```
 
+## Arquivos `.html` em vez de `.pdf` no diretório de downloads
+
+Se você encontrou arquivos `.html` no diretório onde deveria estar o PDF, isso indica que o download do PDF oficial falhou (por exemplo, por um erro 403 Forbidden no portal). O cliente executou a lógica de fallback com sucesso e salvou o HTML de impressão da nota fiscal para garantir a visualização da mesma. Você pode abrir este arquivo diretamente em qualquer navegador para visualizar e imprimir a nota.
+
+## Erro HTTP 429 (Too Many Requests) nas requisições ao ADN
+
+A API do Ambiente de Distribuição Nacional (ADN) possui controle de taxa (rate limiting). O cliente possui um mecanismo de backoff exponencial automático que aguardará alguns segundos e tentará novamente. Caso o erro persista após 5 tentativas:
+- Verifique se não há múltiplos processos utilizando o mesmo certificado digital simultaneamente.
+- Aguarde alguns minutos antes de reiniciar o processo.
+
 ## Observação final
 
 Se o portal do Emissor Nacional mudar, alguns seletores HTML podem precisar ser revisados no `core/cliente_nfse.py`.

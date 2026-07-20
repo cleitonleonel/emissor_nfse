@@ -37,4 +37,7 @@ Esta documentação foi organizada para ajudar você a entender rapidamente o pr
 - lint com `ruff`
 - documentação servida diretamente da pasta `docs/`
 - runtime alvo em `Python 3.11+`
+- suporte à API do Ambiente de Distribuição Nacional (ADN) para download e listagem usando Certificado A1
+- mecanismo de fallback automático de PDF para HTML de impressão em caso de falha de download (HTTP 403)
+
 

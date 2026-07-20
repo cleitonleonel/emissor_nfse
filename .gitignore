@@ -20,3 +20,6 @@ split_css.py
 split_html.py
 split_js.py
 scratch/
+*.egg-info/
+dist/
+build/

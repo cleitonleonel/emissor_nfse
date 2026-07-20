@@ -22,16 +22,19 @@ Principais métodos:
 
 - `autenticar() -> bool` — autentica via certificado A1 (se informado) ou via usuário/senha.
 - `obter_cnpj() -> Optional[str]` — retorna o CNPJ/CPF detectado após a autenticação.
-- `listar_notas_emitidas(data_inicio: Optional[str] = None, data_fim: Optional[str] = None) -> Dict[str, Any]` — retorna as notas emitidas ou uma estrutura com `erro`.
-- `listar_notas_recebidas(data_inicio: Optional[str] = None, data_fim: Optional[str] = None) -> Dict[str, Any]` — consulta notas recebidas no mesmo formato geral.
-- `baixar_xml(url: str, status: str, data_emissao: Any = None) -> str` — baixa e salva XML com organização por cliente e metadados.
-- `baixar_pdf(url: str, status: str, data_emissao: Any = None) -> str` — baixa e salva PDF com organização por cliente e metadados.
+- `listar_notas_emitidas(data_inicio: Optional[str] = None, data_fim: Optional[str] = None) -> Dict[str, Any]` — retorna as notas emitidas ou uma estrutura com `erro` (usa ADN se o certificado digital estiver disponível).
+- `listar_notas_recebidas(data_inicio: Optional[str] = None, data_fim: Optional[str] = None) -> Dict[str, Any]` — consulta notas recebidas no mesmo formato geral (usa ADN se o certificado digital estiver disponível).
+- `baixar_xml(url: str, status: str, data_emissao: Any = None) -> str` — baixa e salva XML com organização por cliente e metadados. Se configurado com certificado digital e a URL pertencer ao ADN, realiza a recuperação automática via ADN.
+- `baixar_pdf(url: str, status: str, data_emissao: Any = None) -> str` — baixa e salva PDF com organização por cliente e metadados. Se configurado com certificado digital, realiza a recuperação automática via ADN.
 - `emitir_nota_simples(payload_dados: Dict[str, Any]) -> None` — envia um DPS (payload livre) para emissão.
+- `obter_impressao_html(chave: str) -> Optional[str]` — recupera o HTML da página de impressão de uma NFS-e a partir da sua chave de acesso de 44 dígitos.
+- `salvar_xml_adn(xml_bytes: bytes, chave: str, status: str = "gerada", data_emissao: Any = None) -> str` — salva o arquivo XML obtido via ADN no diretório correspondente.
 
 Notas:
 
-- Os métodos usam `core.cliente_http.ClienteHttp` para as requisições.
+- Os métodos usam `core.cliente_http.ClienteHttp` para as requisições normais e chamadas diretas ao ADN.
 - Os downloads são implementados de forma a consumir memória de forma eficiente (stream para binários) e criam a estrutura configurada em `save_path`/`path_structure`.
+- Há um mecanismo de fallback para o download de PDFs: caso o download do PDF falhe ou retorne HTTP 403, o cliente tenta buscar o HTML de impressão correspondente via `obter_impressao_html` e o salva com a extensão `.html`.
 - O cliente força `/{STATUS}/{EXT}` na estrutura final quando essas tags não são informadas.
 - O XML é normalizado antes de ser salvo para reduzir espaços extras entre elementos.
 
