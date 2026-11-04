@@ -1,5 +1,5 @@
 [project]
-name = "emissor_nfse"
+name = "pynfse"
 version = "0.1.0"
 description = "Cliente Python para automação do Emissor Nacional de NFS-e"
 readme = "README.md"
@@ -67,5 +67,5 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["pynfse*", "emissor_nfse_*"]
+include = ["pynfse*"]
 
