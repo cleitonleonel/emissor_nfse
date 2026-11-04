@@ -36,7 +36,8 @@ def main():
         # O método autenticar vai pular a lógica de certificado
         # e realizar o POST no formulário de login padrão.
         print("Iniciando login...")
-        cliente.autenticar(usar_certificado=False)
+        cliente.autenticar()
+        # cliente.autenticar(usar_certificado=False)
 
         # Exibe o CNPJ autenticado
         cnpj = cliente.obter_cnpj() or "CNPJ_DESCONHECIDO"

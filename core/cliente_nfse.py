@@ -96,17 +96,17 @@ class ClienteNfseNacional:
         resposta = self.http.enviar_requisicao("GET", EndpointsNfse.DASHBOARD)
         soup = BeautifulSoup(resposta.content, "html.parser")
 
-        menu_perfil = soup.find('li', class_='dropdown perfil')
+        menu_perfil = soup.find('ul', class_='nav navbar-nav navbar-right')
         if menu_perfil:
-            perfil = menu_perfil.find("li")
-            if perfil:
-                perfil_text = perfil.text.strip()
+            inscricao = menu_perfil.find("span", class_="inscricao")
+            if inscricao:
+                perfil_text = inscricao.text.strip()
                 logger.info(f"Usuário logado: {perfil_text}")
+                # Remove tudo o que não for dígito
+                digitos = re.sub(r'\D', '', perfil_text)
+                # Agora busca/valida de 11 (CPF) a 14 (CNPJ) dígitos
+                match = re.search(r'^\d{11,14}$', digitos)
 
-                # Extrai o CNPJ/CPF do texto do perfil (geralmente no início
-                # ou entre parênteses). Ex.: "19495981000113"
-
-                match = re.search(r'\d{11,14}', perfil_text)
                 if match:
                     self._cnpj_usuario = match.group()
                     logger.info(f"CNPJ extraído: {self._cnpj_usuario}")
@@ -244,11 +244,11 @@ class ClienteNfseNacional:
                     time.sleep(1)
 
     def salvar_xml_adn(
-        self,
-        xml_bytes: bytes,
-        chave: str,
-        status: str = "gerada",
-        data_emissao: Any = None,
+            self,
+            xml_bytes: bytes,
+            chave: str,
+            status: str = "gerada",
+            data_emissao: Any = None,
     ) -> str:
         """Salva o XML obtido do ADN no local configurado e retorna o caminho."""
         nome_arquivo = f"{chave}.xml"
@@ -343,10 +343,10 @@ class ClienteNfseNacional:
             return None
 
     def _listar_notas_adn(
-        self,
-        tipo: str,
-        data_inicio: Optional[str] = None,
-        data_fim: Optional[str] = None,
+            self,
+            tipo: str,
+            data_inicio: Optional[str] = None,
+            data_fim: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Busca notas no Ambiente de Distribuição Nacional (ADN) usando o certificado."""
         import base64
@@ -384,15 +384,15 @@ class ClienteNfseNacional:
 
         try:
             while paginas < 50:
-                url = f"{EndpointsNfse.ADN_BASE_URL}/contribuintes/DFe/{nsu:020d}?cnpj={cnpj}"
+                url = f"{EndpointsNfse.ADN_BASE_URL}/contribuintes/DFe/{nsu:020d}?cnpjConsulta={cnpj}"
                 logger.info(f"Buscando lote DFe no ADN (NSU={nsu})...")
                 try:
                     resp = self._requisicao_adn("GET", url)
                 except Exception as ex:
                     import requests
                     has_resp = (
-                        isinstance(ex, requests.exceptions.HTTPError)
-                        and ex.response is not None
+                            isinstance(ex, requests.exceptions.HTTPError)
+                            and ex.response is not None
                     )
                     if has_resp and ex.response.status_code == 404:
                         logger.info("Fim da lista de documentos (ADN retornou 404).")
@@ -488,10 +488,10 @@ class ClienteNfseNacional:
             return {"notas": [], "erro": f"Erro na consulta do ADN: {e}"}
 
     def listar_notas_emitidas(
-        self,
-        data_inicio: Optional[str] = None,
-        data_fim: Optional[str] = None,
-        usar_adn: bool = True,
+            self,
+            data_inicio: Optional[str] = None,
+            data_fim: Optional[str] = None,
+            usar_adn: bool = True,
     ) -> Dict[str, Any]:
         """
         Lista as notas fiscais emitidas em um período.
@@ -578,10 +578,10 @@ class ClienteNfseNacional:
         return {"notas": dados_notas}
 
     def listar_notas_recebidas(
-        self,
-        data_inicio: Optional[str] = None,
-        data_fim: Optional[str] = None,
-        usar_adn: bool = True,
+            self,
+            data_inicio: Optional[str] = None,
+            data_fim: Optional[str] = None,
+            usar_adn: bool = True,
     ) -> Dict[str, Any]:
         """
         Lista as notas fiscais emitidas contra um cnpj em um determinado período.
@@ -671,11 +671,11 @@ class ClienteNfseNacional:
         self._tipo_consulta = tipo_consulta
 
     def _baixar_arquivo(
-        self,
-        url: str,
-        extensao: str,
-        status: str = "",
-        data_emissao: Any = None,
+            self,
+            url: str,
+            extensao: str,
+            status: str = "",
+            data_emissao: Any = None,
     ) -> str:
         """Baixa XML/PDF e grava em uma estrutura dinâmica por cliente, tipo, data,
         status e extensão.
@@ -739,41 +739,41 @@ class ClienteNfseNacional:
             if extensao.lower() == "xml":
                 resposta = self.http.enviar_requisicao("GET", url)
                 conteudo = resposta.text.strip()
-                
+
                 # Check dynamically if Captcha challenge was returned
                 resposta_url = getattr(resposta, "url", "")
                 if (
-                    "ModalCaptcha" in resposta_url 
-                    or "ModalCaptcha" in conteudo 
-                    or conteudo.lower().startswith("<html") 
-                    or conteudo.lower().startswith("<!doctype")
-                    or not (conteudo.startswith("<") or conteudo.startswith("<?xml"))
+                        "ModalCaptcha" in resposta_url
+                        or "ModalCaptcha" in conteudo
+                        or conteudo.lower().startswith("<html")
+                        or conteudo.lower().startswith("<!doctype")
+                        or not (conteudo.startswith("<") or conteudo.startswith("<?xml"))
                 ):
                     logger.warning(
                         "Download de XML exige resolução de Captcha. "
                         "Retornando vazio."
                     )
                     return ""
-                
+
                 conteudo_xml = re.sub(r">\s+<", "><", conteudo)
                 caminho_completo.write_text(conteudo_xml, encoding="utf-8")
             else:
                 resposta = self.http.enviar_requisicao("GET", url, stream=True)
-                
+
                 # Check dynamically if Captcha challenge was returned
                 resposta_url = getattr(resposta, "url", "")
                 if "ModalCaptcha" in resposta_url:
                     raise RuntimeError("Download do PDF oficial exige Captcha.")
-                
+
                 conteudo_generator = resposta.iter_content(chunk_size=8192)
                 try:
                     first_chunk = next(conteudo_generator)
                 except StopIteration:
                     first_chunk = b""
-                    
+
                 if not first_chunk.startswith(b"%PDF"):
                     raise RuntimeError("Download do PDF oficial exige Captcha (HTML retornado).")
-                
+
                 with open(caminho_completo, "wb") as f:
                     f.write(first_chunk)
                     for chunk in conteudo_generator:
@@ -807,14 +807,14 @@ class ClienteNfseNacional:
             nsu = 0
             paginas = 0
             while paginas < 50:
-                adn_url = f"{EndpointsNfse.ADN_BASE_URL}/contribuintes/DFe/{nsu:020d}?cnpj={cnpj}"
+                adn_url = f"{EndpointsNfse.ADN_BASE_URL}/contribuintes/DFe/{nsu:020d}?cnpjConsulta={cnpj}"
                 try:
                     resp = self._requisicao_adn("GET", adn_url)
                 except Exception as ex:
                     import requests
                     has_resp = (
-                        isinstance(ex, requests.exceptions.HTTPError)
-                        and ex.response is not None
+                            isinstance(ex, requests.exceptions.HTTPError)
+                            and ex.response is not None
                     )
                     if has_resp and ex.response.status_code == 404:
                         logger.info("Fim da lista de documentos (ADN retornou 404).")
@@ -910,7 +910,7 @@ class ClienteNfseNacional:
 
         # Baixa arquivo normal (via portal)
         resultado_download = self._baixar_arquivo(url, "pdf", status, data_emissao)
-        
+
         # Se falhou ou retornou HTML (ex: captcha) e temos o XML, gera offline!
         if not resultado_download or resultado_download.lower().endswith(".html"):
             # Calcula caminho do XML correspondente
@@ -919,11 +919,11 @@ class ClienteNfseNacional:
             xml_rel = estrutura
             for tag, val in xml_tags.items():
                 xml_rel = xml_rel.replace(tag, val)
-            
+
             caminho_xml_dir = Path(self.save_path)
             for part in [p for p in xml_rel.replace("\\", "/").split("/") if p.strip()]:
                 caminho_xml_dir = caminho_xml_dir / part
-            
+
             caminho_xml = caminho_xml_dir / f"{chave}.xml"
             if caminho_xml.exists():
                 logger.info(
@@ -938,6 +938,5 @@ class ClienteNfseNacional:
                     return str(caminho_completo)
                 except Exception as ex:
                     logger.error(f"Erro ao gerar PDF offline: {ex}")
-        
-        return resultado_download
 
+        return resultado_download
