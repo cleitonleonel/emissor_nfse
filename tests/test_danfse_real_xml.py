@@ -1,7 +1,9 @@
-import os
-import pytest
 from pathlib import Path
+
+import pytest
+
 from pynfse.danfse_generator import DanfseGenerator
+
 
 def test_gerar_danfse_com_xml_real(tmp_path):
     # Procura por arquivos XML reais na pasta de downloads do nfse_manager
@@ -16,7 +18,9 @@ def test_gerar_danfse_com_xml_real(tmp_path):
             # Busca recursiva por arquivos .xml (excluindo arquivos ocultos ou da IDE)
             arquivos = list(caminho.glob("**/*.xml"))
             # Filtra apenas os XMLs que parecem ser da NFS-e (nome do arquivo longo com a chave)
-            xmls_filtrados = [f for f in arquivos if len(f.name) > 30 and not f.name.startswith(".")]
+            xmls_filtrados = [
+                f for f in arquivos if len(f.name) > 30 and not f.name.startswith(".")
+            ]
             if xmls_filtrados:
                 xml_real = xmls_filtrados[0]
                 break

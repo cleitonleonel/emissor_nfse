@@ -1,5 +1,5 @@
-import pytest
 from pathlib import Path
+
 from pynfse.danfse_generator import DanfseGenerator
 
 NS = "http://www.sped.fazenda.gov.br/nfse"
@@ -59,7 +59,9 @@ def test_gerar_danfse_completa(tmp_path):
         <serv>
           <cServ>
             <cTribNac>1.05</cTribNac>
-            <xDescServ>Licenciamento e cessao de direito de uso de programas de computacao padronizados ou customizados, incluindo suporte tecnico, atualizacao e outras manutencoes corretivas ou preventivas.</xDescServ>
+            <xDescServ>Licenciamento e cessao de direito de uso de programas de computacao
+            padronizados ou customizados, incluindo suporte tecnico, atualizacao e
+            outras manutencoes corretivas ou preventivas.</xDescServ>
           </cServ>
           <infoCompl>Nota fiscal de teste para homologacao do emissor nacional de NFS-e.</infoCompl>
         </serv>

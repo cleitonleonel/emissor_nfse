@@ -394,7 +394,10 @@ class ClienteNfseNacional:
 
         try:
             while paginas < 50:
-                url = f"{EndpointsNfse.ADN_BASE_URL}/contribuintes/DFe/{nsu:020d}?cnpjConsulta={cnpj}"
+                url = (
+                    f"{EndpointsNfse.ADN_BASE_URL}/contribuintes/DFe/{nsu:020d}"
+                    f"?cnpjConsulta={cnpj}"
+                )
                 logger.info(f"Buscando lote DFe no ADN (NSU={nsu})...")
                 try:
                     resp = self._requisicao_adn("GET", url)
@@ -817,7 +820,10 @@ class ClienteNfseNacional:
             nsu = 0
             paginas = 0
             while paginas < 50:
-                adn_url = f"{EndpointsNfse.ADN_BASE_URL}/contribuintes/DFe/{nsu:020d}?cnpjConsulta={cnpj}"
+                adn_url = (
+                    f"{EndpointsNfse.ADN_BASE_URL}/contribuintes/DFe/{nsu:020d}"
+                    f"?cnpjConsulta={cnpj}"
+                )
                 try:
                     resp = self._requisicao_adn("GET", adn_url)
                 except Exception as ex:
