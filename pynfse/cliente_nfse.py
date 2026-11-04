@@ -5,8 +5,8 @@ from typing import Any, Dict, Optional
 
 from bs4 import BeautifulSoup
 
-from core.certificado import GerenciadorCertificadoA1
-from core.cliente_http import ClienteHttp
+from pynfse.certificado import GerenciadorCertificadoA1
+from pynfse.cliente_http import ClienteHttp
 
 logger = logging.getLogger(__name__)
 
@@ -96,22 +96,32 @@ class ClienteNfseNacional:
         resposta = self.http.enviar_requisicao("GET", EndpointsNfse.DASHBOARD)
         soup = BeautifulSoup(resposta.content, "html.parser")
 
+        # 1. Layout atual do portal (navbar com span.inscricao)
         menu_perfil = soup.find('ul', class_='nav navbar-nav navbar-right')
         if menu_perfil:
             inscricao = menu_perfil.find("span", class_="inscricao")
-            if inscricao:
-                perfil_text = inscricao.text.strip()
-                logger.info(f"Usuário logado: {perfil_text}")
-                # Remove tudo o que não for dígito
-                digitos = re.sub(r'\D', '', perfil_text)
-                # Agora busca/valida de 11 (CPF) a 14 (CNPJ) dígitos
-                match = re.search(r'^\d{11,14}$', digitos)
+            perfil_text = inscricao.text.strip() if inscricao else menu_perfil.text.strip()
+            logger.info(f"Usuário logado: {perfil_text}")
+            digitos = re.sub(r'\D', '', perfil_text)
+            match = re.search(r'^\d{11,14}$', digitos)
+            if match:
+                self._cnpj_usuario = match.group()
+                logger.info(f"CNPJ extraído: {self._cnpj_usuario}")
+            return True
 
-                if match:
-                    self._cnpj_usuario = match.group()
-                    logger.info(f"CNPJ extraído: {self._cnpj_usuario}")
+        # 2. Layout alternativo/legado do portal (dropdown perfil)
+        menu_perfil_legado = soup.find('li', class_='dropdown perfil')
+        if menu_perfil_legado:
+            perfil = menu_perfil_legado.find("li")
+            perfil_text = perfil.text.strip() if perfil else menu_perfil_legado.text.strip()
+            logger.info(f"Usuário logado: {perfil_text}")
+            digitos = re.sub(r'\D', '', perfil_text)
+            match = re.search(r'^\d{11,14}$', digitos)
+            if match:
+                self._cnpj_usuario = match.group()
+                logger.info(f"CNPJ extraído: {self._cnpj_usuario}")
+            return True
 
-                return True
         return False
 
     def obter_cnpj(self) -> Optional[str]:
@@ -414,7 +424,7 @@ class ClienteNfseNacional:
                         continue
 
                     # Parseia dados do XML temporariamente
-                    from core.xml_parser import extrair_dados_nfse
+                    from pynfse.xml_parser import extrair_dados_nfse
                     with tempfile.NamedTemporaryFile(delete=False, suffix=".xml") as temp_xml:
                         temp_xml.write(xml_bytes)
                         temp_xml_path = temp_xml.name
@@ -930,7 +940,7 @@ class ClienteNfseNacional:
                     f"Download do PDF oficial falhou ou foi bloqueado. "
                     f"Gerando PDF offline a partir do XML local: {caminho_xml}"
                 )
-                from core.danfse_generator import DanfseGenerator
+                from pynfse.danfse_generator import DanfseGenerator
                 try:
                     generator = DanfseGenerator(str(caminho_xml), status=status)
                     generator.gerar_pdf(str(caminho_completo))

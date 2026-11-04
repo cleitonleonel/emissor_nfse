@@ -1,7 +1,7 @@
 from pathlib import Path
 
-import core.certificado as certificado_module
-from core.certificado import GerenciadorCertificadoA1
+import pynfse.certificado as certificado_module
+from pynfse.certificado import GerenciadorCertificadoA1
 
 
 class FakeCertificado:

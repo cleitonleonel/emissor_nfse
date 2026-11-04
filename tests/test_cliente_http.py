@@ -1,7 +1,7 @@
 import pytest
 import requests
 
-from core.cliente_http import ClienteHttp
+from pynfse.cliente_http import ClienteHttp
 
 
 class DummyResponse:

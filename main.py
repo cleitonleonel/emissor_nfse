@@ -1,11 +1,11 @@
-"""Script de exemplo para autenticar no portal e baixar notas via `core`."""
+"""Script de exemplo para autenticar no portal e baixar notas via `pynfse`."""
 
 import logging
 import os
 
 from dotenv import load_dotenv
 
-from core.cliente_nfse import ClienteNfseNacional
+from pynfse.cliente_nfse import ClienteNfseNacional
 
 # Carrega as variáveis de ambiente do arquivo .env
 load_dotenv()

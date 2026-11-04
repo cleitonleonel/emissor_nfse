@@ -1,7 +1,7 @@
 from pathlib import Path
 
-import core.cliente_nfse as cliente_nfse_module
-from core.cliente_nfse import ClienteNfseNacional, EndpointsNfse
+import pynfse.cliente_nfse as cliente_nfse_module
+from pynfse.cliente_nfse import ClienteNfseNacional, EndpointsNfse
 
 
 class FakeResponse:
@@ -23,11 +23,12 @@ class FakeResponse:
 HTML_LOGIN_AUTENTICADO = """
 <html>
   <body>
-    <ul>
-      <li class="dropdown perfil">
-        <ul>
-          <li>Usuário Teste</li>
-        </ul>
+    <ul class="nav navbar-nav navbar-right">
+      <li>
+        Logado como: <span class="inscricao">12.345.678/0001-85</span>
+      </li>
+      <li>
+        <div class="timer pull-right"><span class="sessionTimeout">20:00</span></div>
       </li>
     </ul>
   </body>
@@ -79,9 +80,6 @@ HTML_DASHBOARD = """
 def _isolar_cwd(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     return tmp_path
-
-
-
 
 
 def test_autenticar_via_usuario_e_senha(tmp_path, monkeypatch):
@@ -175,6 +173,15 @@ def test_esta_autenticado_detecta_usuario_logado(tmp_path, monkeypatch):
 
     assert cliente.esta_autenticado() is True
 
+    # Valida também com o layout de navbar com span.inscricao
+    monkeypatch.setattr(
+        cliente.http,
+        "enviar_requisicao",
+        lambda metodo, url, **kwargs: FakeResponse(content=HTML_LOGIN_AUTENTICADO.encode("utf-8")),
+    )
+    assert cliente.esta_autenticado() is True
+    assert cliente.obter_cnpj() == "12345678000185"
+
 
 def test_listar_notas_emitidas_parseia_links(tmp_path, monkeypatch):
     _isolar_cwd(tmp_path, monkeypatch)
@@ -242,4 +249,3 @@ def test_baixar_xml_e_pdf_salva_arquivos(tmp_path, monkeypatch):
     assert Path(caminho_pdf).read_bytes() == b"%PDF-1.4-conteudo-pdf"
     assert caminho_xml.endswith("nota123.xml")
     assert caminho_pdf.endswith("nota123.pdf")
-

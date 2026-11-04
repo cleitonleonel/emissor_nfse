@@ -3,8 +3,8 @@ from pathlib import Path
 
 import pytest
 
-import core.cliente_nfse as cliente_nfse_module
-from core.cliente_nfse import ClienteNfseNacional, EndpointsNfse, FalhaAutenticacaoError
+import pynfse.cliente_nfse as cliente_nfse_module
+from pynfse.cliente_nfse import ClienteNfseNacional, EndpointsNfse, FalhaAutenticacaoError
 
 
 class FakeResponse:

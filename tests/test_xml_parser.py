@@ -1,7 +1,7 @@
 from datetime import datetime
 from pathlib import Path
 
-import core.xml_parser as xml_parser
+import pynfse.xml_parser as xml_parser
 
 NS = "http://www.sped.fazenda.gov.br/nfse"
 
@@ -13,7 +13,7 @@ def _write_xml(tmp_path: Path, name: str, content: str) -> Path:
 
 
 def test_helpers_e_parsing_basico():
-    assert xml_parser._find_text(None, "nfse:algo") is None
+    assert xml_parser._find_text(None, "pynfse:algo") is None
     assert xml_parser._parse_float(None) == 0.0
     assert xml_parser._parse_float("1,23") == 1.23
     assert xml_parser._parse_float("abc") == 0.0
@@ -60,7 +60,7 @@ def test_extrair_dados_nfse_xml_completo(tmp_path):
   </infNFSe>
 </CompNfse>
 """
-    xml_path = _write_xml(tmp_path, "nfse.xml", xml)
+    xml_path = _write_xml(tmp_path, "pynfse.xml", xml)
 
     dados = xml_parser.extrair_dados_nfse(str(xml_path))
 

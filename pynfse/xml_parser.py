@@ -12,7 +12,7 @@ from typing import Optional, cast
 logger = logging.getLogger(__name__)
 
 # Namespace padrão da NFS-e Nacional
-NS = {"nfse": "http://www.sped.fazenda.gov.br/nfse"}
+NS = {"pynfse": "http://www.sped.fazenda.gov.br/nfse"}
 
 
 def _find_text(root: Optional[ET.Element], xpath: str) -> Optional[str]:
@@ -84,30 +84,30 @@ def extrair_dados_nfse(xml_path: str) -> dict:
         return {}
 
     # Navega até o nó raiz infNFSe (pode ser diretamente ou dentro de NFSe)
-    inf_el = root.find("nfse:infNFSe", NS)
+    inf_el = root.find("pynfse:infNFSe", NS)
     inf = cast(ET.Element, inf_el if inf_el is not None else root)
 
     # Extrai o atributo Id da chave da nota
     chave = inf.get("Id", "").replace("NFS", "") if inf is not None else None
 
     # Número da nota
-    numero = _find_text(inf, "nfse:nNFSe")
+    numero = _find_text(inf, "pynfse:nNFSe")
 
     # Data de processamento — mais precisa que a data de emissão da DPS
-    data_str = _find_text(inf, "nfse:dhProc")
+    data_str = _find_text(inf, "pynfse:dhProc")
     data_emissao = _parse_datetime(data_str)
 
     # Se não achar dhProc, busca dhEmi dentro da DPS
     if data_emissao is None:
-        dps = inf.find("nfse:DPS/nfse:infDPS", NS)
+        dps = inf.find("pynfse:DPS/pynfse:infDPS", NS)
         if dps is not None:
-            data_emissao = _parse_datetime(_find_text(dps, "nfse:dhEmi"))
+            data_emissao = _parse_datetime(_find_text(dps, "pynfse:dhEmi"))
 
     # Valor líquido da NFS-e (campo principal)
-    valor_liq = _parse_float(_find_text(inf, "nfse:valores/nfse:vLiq"))
+    valor_liq = _parse_float(_find_text(inf, "pynfse:valores/pynfse:vLiq"))
 
     # Valor bruto do serviço (dentro da DPS)
-    dps_node = inf.find("nfse:DPS/nfse:infDPS", NS)
+    dps_node = inf.find("pynfse:DPS/pynfse:infDPS", NS)
     valor_serv = 0.0
     cnpj_tomador = None
     cpf_tomador = None
@@ -116,24 +116,24 @@ def extrair_dados_nfse(xml_path: str) -> dict:
 
     if dps_node is not None:
         valor_serv = _parse_float(
-            _find_text(dps_node, "nfse:valores/nfse:vServPrest/nfse:vServ")
+            _find_text(dps_node, "pynfse:valores/pynfse:vServPrest/pynfse:vServ")
         )
         # Tomador
-        toma = dps_node.find("nfse:toma", NS)
+        toma = dps_node.find("pynfse:toma", NS)
         if toma is not None:
-            cnpj_tomador = _find_text(toma, "nfse:CNPJ")
-            cpf_tomador = _find_text(toma, "nfse:CPF")
-            nome_tomador = _find_text(toma, "nfse:xNome")
+            cnpj_tomador = _find_text(toma, "pynfse:CNPJ")
+            cpf_tomador = _find_text(toma, "pynfse:CPF")
+            nome_tomador = _find_text(toma, "pynfse:xNome")
 
         # Descrição do serviço
-        descricao = _find_text(dps_node, "nfse:serv/nfse:cServ/nfse:xDescServ")
+        descricao = _find_text(dps_node, "pynfse:serv/pynfse:cServ/pynfse:xDescServ")
 
     # Prestador
-    emit = inf.find("nfse:emit", NS)
-    cnpj_prestador = _find_text(emit, "nfse:CNPJ") if emit is not None else None
+    emit = inf.find("pynfse:emit", NS)
+    cnpj_prestador = _find_text(emit, "pynfse:CNPJ") if emit is not None else None
 
     # Status
-    status_code = _find_text(inf, "nfse:cStat")
+    status_code = _find_text(inf, "pynfse:cStat")
 
     return {
         "numero": numero,

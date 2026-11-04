@@ -33,7 +33,7 @@
 ## Estrutura atual do repositório
 
 - `main.py`: script de exemplo para autenticar, consultar e baixar notas
-- `core/`: biblioteca principal reutilizável
+- `pynfse/`: biblioteca principal reutilizável
 - `tests/`: suíte automatizada mantida no fluxo atual
 - `utils/`: utilitários e testes manuais/legados
 - `docs/`: documentação publicada via GitHub Pages
@@ -42,7 +42,7 @@
 - `certificados/`: certificados locais usados em testes/execução manual
 - `pyproject.toml`: metadados do projeto, configuração do `pytest` e do `ruff`
 
-> **Importante:** este repositório atual é centrado no pacote `core/` e no script `main.py`. As instruções abaixo refletem essa estrutura real.
+> **Importante:** este repositório atual é centrado no pacote `pynfse/` e no script `main.py`. As instruções abaixo refletem essa estrutura real.
 
 ## Requisitos
 
@@ -87,7 +87,7 @@ NFSE_SENHA=sua_senha_aqui
 Se for usar certificado A1, informe o caminho e a senha ao instanciar o cliente:
 
 ```python
-from core.cliente_nfse import ClienteNfseNacional
+from pynfse.cliente_nfse import ClienteNfseNacional
 
 cliente = ClienteNfseNacional(
     usuario="12345678000199",
@@ -105,7 +105,7 @@ O `main.py` autentica, consulta notas em um período fixo e baixa XML/PDF quando
 python main.py
 ```
 
-## Exemplos de uso do `core`
+## Exemplos de uso do `pynfse`
 
 ### Autenticar
 

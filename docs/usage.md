@@ -36,7 +36,7 @@ NFSE_SENHA=sua_senha_aqui
 Se for usar certificado A1 (PFX), informe o caminho e senha ao instanciar o cliente:
 
 ```python
-from core.cliente_nfse import ClienteNfseNacional
+from pynfse.cliente_nfse import ClienteNfseNacional
 
 cliente = ClienteNfseNacional(
     caminho_pfx="/caminho/para/certificado.pfx",

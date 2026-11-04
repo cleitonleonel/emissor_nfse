@@ -92,9 +92,9 @@ jobs:
         run: |
           if [ -f .venv/bin/activate ]; then
             source .venv/bin/activate
-            pytest --cov=core --cov-report=xml:coverage.xml --cov-report=html -q
+            pytest --cov=pynfse --cov-report=xml:coverage.xml --cov-report=html -q
           else
-            poetry run pytest --cov=core --cov-report=xml:coverage.xml --cov-report=html -q
+            poetry run pytest --cov=pynfse --cov-report=xml:coverage.xml --cov-report=html -q
           fi
 
       - name: Upload coverage artifact

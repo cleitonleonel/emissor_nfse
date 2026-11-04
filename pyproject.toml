@@ -67,5 +67,5 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["core*", "emissor_nfse_*"]
+include = ["pynfse*", "emissor_nfse_*"]
 

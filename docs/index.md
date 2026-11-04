@@ -9,7 +9,7 @@ Esta documentação foi organizada para ajudar você a entender rapidamente o pr
 ## O que você encontra aqui
 
 - **Guia de uso**: instalação, configuração e execução
-- **API**: referência rápida das classes e métodos em `core/`
+- **API**: referência rápida das classes e métodos em `pynfse/`
 - **Arquitetura**: visão da estrutura interna atual do projeto
 - **Troubleshooting**: problemas comuns e como resolver
 
@@ -23,7 +23,7 @@ Esta documentação foi organizada para ajudar você a entender rapidamente o pr
 ## Estrutura resumida
 
 - `main.py`: exemplo de execução do fluxo principal
-- `core/`: cliente HTTP, certificado A1 e integração com NFS-e
+- `pynfse/`: cliente HTTP, certificado A1 e integração com NFS-e
 - `utils/`: utilitários e testes manuais/legados
 - `tests/`: suíte automatizada mantida
 - `docs/`: documentação publicada pelo GitHub Pages

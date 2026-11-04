@@ -43,9 +43,9 @@ jobs:
         run: |
           if [ -f .venv/bin/activate ]; then
             source .venv/bin/activate
-            pytest --cov=core --cov-report=xml:coverage.xml -q
+            pytest --cov=pynfse --cov-report=xml:coverage.xml -q
           else
-            poetry run pytest --cov=core --cov-report=xml:coverage.xml -q
+            poetry run pytest --cov=pynfse --cov-report=xml:coverage.xml -q
           fi
 
       - name: Generate coverage badge

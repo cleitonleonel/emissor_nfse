@@ -1,22 +1,22 @@
-# API — referência rápida do `core`
+# API — referência rápida do `pynfse`
 
 > Navegação: [Início](index.md) · [Guia de uso](usage.md) · [API](api.md) · [Arquitetura](architecture.md) · [Troubleshooting](troubleshooting.md)
 
-Este documento descreve de forma sucinta as classes e funções mais importantes dentro da pasta `core/`.
+Este documento descreve de forma sucinta as classes e funções mais importantes dentro da pasta `pynfse/`.
 
-## `core.cliente_http.ClienteHttp`
+## `pynfse.cliente_http.ClienteHttp`
 
 - Sessão HTTP baseada em `requests.Session` com retries configurados.
 - Método principal: `enviar_requisicao(metodo: str, url: str, **kwargs) -> requests.Response`
 - Centraliza o envio de requisições usadas pelo cliente NFS-e.
 
-## `core.certificado.GerenciadorCertificadoA1`
+## `pynfse.certificado.GerenciadorCertificadoA1`
 
 Context manager que converte um arquivo `.pfx` para dois arquivos PEM temporários (certificado e chave), retornando uma tupla `(caminho_cert_pem, caminho_key_pem)` no `__enter__` e removendo os arquivos no `__exit__`.
 
 Uso típico: use `GerenciadorCertificadoA1` com o caminho do `.pfx` e a senha do certificado para obter dois arquivos PEM temporários durante o contexto de uso e passá-los ao cliente HTTP quando necessário.
 
-## `core.cliente_nfse.ClienteNfseNacional`
+## `pynfse.cliente_nfse.ClienteNfseNacional`
 
 Principais métodos:
 
@@ -32,7 +32,7 @@ Principais métodos:
 
 Notas:
 
-- Os métodos usam `core.cliente_http.ClienteHttp` para as requisições normais e chamadas diretas ao ADN.
+- Os métodos usam `pynfse.cliente_http.ClienteHttp` para as requisições normais e chamadas diretas ao ADN.
 - Os downloads são implementados de forma a consumir memória de forma eficiente (stream para binários) e criam a estrutura configurada em `save_path`/`path_structure`.
 - Há um mecanismo de fallback para o download de PDFs: caso o download do PDF falhe ou retorne HTTP 403, o cliente tenta buscar o HTML de impressão correspondente via `obter_impressao_html` e o salva com a extensão `.html`.
 - O cliente força `/{STATUS}/{EXT}` na estrutura final quando essas tags não são informadas.
@@ -40,5 +40,5 @@ Notas:
 
 ---
 
-Para detalhes de implementação, consulte os arquivos em `core/`.
+Para detalhes de implementação, consulte os arquivos em `pynfse/`.
 

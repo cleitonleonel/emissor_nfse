@@ -9,7 +9,7 @@ Esta página explica como o projeto está organizado e como o fluxo principal fu
 O repositório está organizado em cinco áreas principais:
 
 - `main.py`: ponto de entrada e exemplo de uso
-- `core/`: cliente HTTP, certificado A1 e cliente NFS-e
+- `pynfse/`: cliente HTTP, certificado A1 e cliente NFS-e
 - `utils/`: ferramentas auxiliares e testes manuais/legados
 - `tests/`: suíte automatizada mantida
 - `docs/`: documentação pública do projeto
@@ -23,9 +23,9 @@ O repositório está organizado em cinco áreas principais:
 4. O cliente consulta notas emitidas/recebidas no período informado. Caso o certificado A1 esteja configurado, o cliente consome diretamente a API do Ambiente de Distribuição Nacional (ADN) para obter os dados do DFe por NSU.
 5. Os arquivos XML e PDF são baixados em uma estrutura por cliente, tipo, ano, mês, status e extensão. Se a API de PDF oficial retornar erro ou 403, é realizado um fallback para obter o HTML de impressão e salvá-lo como `.html`.
 
-## Componentes do `core`
+## Componentes do `pynfse`
 
-### `core.cliente_http`
+### `pynfse.cliente_http`
 
 Responsável pela camada HTTP comum.
 
@@ -33,14 +33,14 @@ Responsável pela camada HTTP comum.
 - aplica retry para instabilidades transitórias
 - centraliza o envio de requisições
 
-### `core.certificado`
+### `pynfse.certificado`
 
 Responsável pelo certificado digital A1.
 
 - converte `.pfx` para PEM temporário
 - remove os arquivos temporários ao final do uso
 
-### `core.cliente_nfse`
+### `pynfse.cliente_nfse`
 
 Responsável pela integração com o portal do Emissor Nacional e o Ambiente de Distribuição Nacional (ADN).
 
@@ -54,7 +54,7 @@ Responsável pela integração com o portal do Emissor Nacional e o Ambiente de 
 
 ```text
 emissor_nfse/
-├── core/
+├── pynfse/
 ├── docs/
 ├── downloads/
 ├── scripts/

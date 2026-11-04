@@ -88,5 +88,5 @@ A API do Ambiente de Distribuição Nacional (ADN) possui controle de taxa (rate
 
 ## Observação final
 
-Se o portal do Emissor Nacional mudar, alguns seletores HTML podem precisar ser revisados no `core/cliente_nfse.py`.
+Se o portal do Emissor Nacional mudar, alguns seletores HTML podem precisar ser revisados no `pynfse/cliente_nfse.py`.
 
