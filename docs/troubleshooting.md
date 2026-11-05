@@ -6,7 +6,7 @@ Esta página reúne problemas comuns e como resolver.
 
 ## O projeto não sobe com Python antigo
 
-O código atual assume `Python 3.11+`. Se você estiver usando uma versão anterior, atualize o interpretador antes de rodar o projeto.
+O código atual requer `Python 3.12+` (conforme definido em `pyproject.toml`). Se você estiver usando uma versão anterior, atualize o interpretador antes de rodar o projeto.
 
 ## O `pytest` na raiz
 

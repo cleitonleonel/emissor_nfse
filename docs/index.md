@@ -1,43 +1,32 @@
-# Emissor_NFSe — Documentação
+# pynfse — Documentação
 
 > Navegação: [Início](index.md) · [Guia de uso](usage.md) · [API](api.md) · [Arquitetura](architecture.md) · [Troubleshooting](troubleshooting.md)
 
 ![Coverage badge](assets/coverage.svg)
 
-Esta documentação foi organizada para ajudar você a entender rapidamente o projeto, executar o cliente principal e localizar detalhes técnicos quando necessário.
+Esta documentação apresenta a biblioteca **`pynfse` (v0.2.0)**, projetada para automatizar o Emissor Nacional de NFS-e e integrar sistemas Python diretamente à API da **Sefin Nacional / ADN v1.01 (NT 1.101 — Reforma Tributária IBS/CBS)**.
 
 ## O que você encontra aqui
 
-- **Guia de uso**: instalação, configuração e execução
-- **API**: referência rápida das classes e métodos em `pynfse/`
-- **Arquitetura**: visão da estrutura interna atual do projeto
-- **Troubleshooting**: problemas comuns e como resolver
-
-## Caminho sugerido de leitura
-
-1. Comece por [Guia de uso](usage.md)
-2. Consulte [Arquitetura](architecture.md) para entender o fluxo
-3. Veja [API](api.md) para detalhes de implementação
-4. Use [Troubleshooting](troubleshooting.md) caso encontre erros
+- **[Guia de uso](usage.md)**: instalação, configuração, consulta/download de notas, emissão via ADN v1.01 e geração offline de DANFS-e
+- **[API](api.md)**: referência completa das classes e funções em `pynfse` e `pynfse.adn`
+- **[Arquitetura](architecture.md)**: visão da estrutura modular do pacote e fluxos de execução
+- **[Troubleshooting](troubleshooting.md)**: soluções para problemas comuns (Captcha/403, rate limit 429, validação XSD)
+- **Referências normativas em `docs/`**:
+  - [Dicionário de 360 Tags Únicas da NFS-e](dicionario_360_tags_unicas_nfse.md)
+  - [Enciclopédia Completa de 645 Tags da NFS-e Nacional](enciclopedia_completa_tags_nfse_nacional_645.md)
 
 ## Estrutura resumida
 
-- `main.py`: exemplo de execução do fluxo principal
-- `pynfse/`: cliente HTTP, certificado A1 e integração com NFS-e
-- `utils/`: utilitários e testes manuais/legados
-- `tests/`: suíte automatizada mantida
-- `docs/`: documentação publicada pelo GitHub Pages
-- `scripts/`: scripts auxiliares
-- `pyproject.toml`: configuração de empacotamento, `pytest` e `ruff`
+- `main.py`: exemplo prático de execução do fluxo de consulta e download
+- `pynfse/`: cliente HTTP, gerenciador de certificado A1, parser XML, gerador de DANFS-e em PDF (`fpdf2`) e cliente do portal/ADN
+- `pynfse/adn/`: motor tributário IBS/CBS (NT 1.101), catálogos oficiais (CST, `cClassTrib`, `cTribNac`, Anexo VIII, `cIndOp`), builders de DPS/Eventos v1.01, validador XSD, assinador XML-DSig e cliente mTLS assíncrono (`httpx`)
+- `tests/`: suíte de testes automatizados (`pytest`)
+- `pyproject.toml`: configuração de empacotamento, dependências, `pytest` e `ruff`
 
-## Status do projeto
+## Destaques da versão 0.2.0
 
-- integração contínua ativa
-- testes automatizados em `pytest`
-- lint com `ruff`
-- documentação servida diretamente da pasta `docs/`
-- runtime alvo em `Python 3.11+`
-- suporte à API do Ambiente de Distribuição Nacional (ADN) para download e listagem usando Certificado A1
-- mecanismo de fallback automático de PDF para HTML de impressão em caso de falha de download (HTTP 403)
-
-
+- Runtime alvo em **Python 3.12+**
+- Suporte integral ao layout **v1.01 (NT 1.101 / LC 214/2025)** com grupos `<IBSCBS>`, validação XSD offline e assinatura ICP-Brasil A1
+- Geração nativa de **DANFS-e em PDF** (`DanfseGenerator`) a partir do XML local, superando bloqueios de Captcha no portal
+- Suíte automatizada com `pytest` e lint limpo com `ruff`

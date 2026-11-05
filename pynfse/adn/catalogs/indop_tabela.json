@@ -1,0 +1,170 @@
+[
+  {
+    "cIndOp": "010100",
+    "local_incidencia": "local da entrega ou disponibilização",
+    "permite_zfm_alc": false,
+    "exige_imovel": false
+  },
+  {
+    "cIndOp": "020101",
+    "local_incidencia": "local do imóvel",
+    "permite_zfm_alc": true,
+    "exige_imovel": true
+  },
+  {
+    "cIndOp": "020201",
+    "local_incidencia": "local do imóvel",
+    "permite_zfm_alc": true,
+    "exige_imovel": true
+  },
+  {
+    "cIndOp": "020301",
+    "local_incidencia": "local do imóvel",
+    "permite_zfm_alc": true,
+    "exige_imovel": true
+  },
+  {
+    "cIndOp": "030101",
+    "local_incidencia": "local da prestação",
+    "permite_zfm_alc": true,
+    "exige_imovel": false
+  },
+  {
+    "cIndOp": "030102",
+    "local_incidencia": "local da prestação",
+    "permite_zfm_alc": true,
+    "exige_imovel": false
+  },
+  {
+    "cIndOp": "030103",
+    "local_incidencia": "local da prestação",
+    "permite_zfm_alc": false,
+    "exige_imovel": false
+  },
+  {
+    "cIndOp": "030104",
+    "local_incidencia": "local da prestação",
+    "permite_zfm_alc": false,
+    "exige_imovel": false
+  },
+  {
+    "cIndOp": "040101",
+    "local_incidencia": "local do evento",
+    "permite_zfm_alc": false,
+    "exige_imovel": false
+  },
+  {
+    "cIndOp": "050100",
+    "local_incidencia": "local da prestação",
+    "permite_zfm_alc": false,
+    "exige_imovel": false
+  },
+  {
+    "cIndOp": "050101",
+    "local_incidencia": "local da prestação",
+    "permite_zfm_alc": true,
+    "exige_imovel": false
+  },
+  {
+    "cIndOp": "050102",
+    "local_incidencia": "local da prestação",
+    "permite_zfm_alc": true,
+    "exige_imovel": false
+  },
+  {
+    "cIndOp": "050103",
+    "local_incidencia": "local da prestação",
+    "permite_zfm_alc": false,
+    "exige_imovel": false
+  },
+  {
+    "cIndOp": "050104",
+    "local_incidencia": "local da prestação",
+    "permite_zfm_alc": false,
+    "exige_imovel": false
+  },
+  {
+    "cIndOp": "050201",
+    "local_incidencia": "local da prestação",
+    "permite_zfm_alc": true,
+    "exige_imovel": false
+  },
+  {
+    "cIndOp": "060101",
+    "local_incidencia": "local da prestação",
+    "permite_zfm_alc": true,
+    "exige_imovel": false
+  },
+  {
+    "cIndOp": "070100",
+    "local_incidencia": "local da prestação",
+    "permite_zfm_alc": false,
+    "exige_imovel": false
+  },
+  {
+    "cIndOp": "080101",
+    "local_incidencia": "via explorada",
+    "permite_zfm_alc": false,
+    "exige_imovel": false
+  },
+  {
+    "cIndOp": "100101",
+    "local_incidencia": "Domicílio principal do adquirente",
+    "permite_zfm_alc": false,
+    "exige_imovel": false
+  },
+  {
+    "cIndOp": "100102",
+    "local_incidencia": "Domicílio principal do adquirente (Prestação onerosa - Adquirente no Exterior)",
+    "permite_zfm_alc": false,
+    "exige_imovel": false
+  },
+  {
+    "cIndOp": "100201",
+    "local_incidencia": "Domicílio principal do destinatário (Prestação não onerosa - Adquirente no País)",
+    "permite_zfm_alc": false,
+    "exige_imovel": false
+  },
+  {
+    "cIndOp": "100301",
+    "local_incidencia": "Domicílio principal do adquirente",
+    "permite_zfm_alc": true,
+    "exige_imovel": false
+  },
+  {
+    "cIndOp": "100302",
+    "local_incidencia": "Domicílio principal do adquirente (Adquirente no Exterior)",
+    "permite_zfm_alc": true,
+    "exige_imovel": false
+  },
+  {
+    "cIndOp": "100401",
+    "local_incidencia": "Domicílio principal do destinatário (Prestação não onerosa)",
+    "permite_zfm_alc": true,
+    "exige_imovel": false
+  },
+  {
+    "cIndOp": "100501",
+    "local_incidencia": "Domicílio principal do adquirente",
+    "permite_zfm_alc": true,
+    "exige_imovel": false
+  },
+  {
+    "cIndOp": "100502",
+    "local_incidencia": "Domicílio principal do adquirente (Adquirente no Exterior)",
+    "permite_zfm_alc": true,
+    "exige_imovel": false
+  },
+  {
+    "cIndOp": "100601",
+    "local_incidencia": "Domicílio principal do destinatário (Prestação não onerosa)",
+    "permite_zfm_alc": true,
+    "exige_imovel": false
+  },
+  {
+    "cIndOp": "301001",
+    "local_incidencia": "local da prestação",
+    "permite_zfm_alc": false,
+    "exige_imovel": false
+  }
+]

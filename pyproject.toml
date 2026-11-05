@@ -1,7 +1,7 @@
 [project]
 name = "pynfse"
-version = "0.1.0"
-description = "Cliente Python para automação do Emissor Nacional de NFS-e"
+version = "0.2.0"
+description = "Cliente Python para automação do Emissor Nacional de NFS-e e API ADN v1.01 (NT 1.101)"
 readme = "README.md"
 requires-python = ">=3.12,<4.0"
 dependencies = [
@@ -9,14 +9,14 @@ dependencies = [
   "certifi==2026.4.22",
   "cffi==2.0.0",
   "charset-normalizer==3.4.7",
-  "cryptography==48.0.0",
+  "cryptography>=43.0.0",
+  "httpx>=0.28.1",
   "idna==3.15",
   "lxml==6.1.0",
-  "openpyxl",
   "python-dotenv==1.2.2",
   "reportlab==4.5.1",
   "requests==2.34.0",
-  "signxml==4.4.0",
+  "signxml>=4.0.0",
   "soupsieve==2.8.3",
   "typing_extensions==4.15.0",
   "urllib3==2.7.0",
@@ -37,8 +37,6 @@ dev = [
   "ruff==0.15.12",
 ]
 
-# Some versions of Poetry (and CI images) expect groups to be defined under
-# `tool.poetry.group.<name>.dependencies` for use with `--with <name>`.
 [tool.poetry.group.dev.dependencies]
 coverage = "7.14.0"
 iniconfig = "2.3.0"
@@ -50,16 +48,16 @@ pytest = "8.4.2"
 pytest-cov = "4.1.0"
 ruff = "0.15.12"
 
-
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra"
 
 [tool.ruff]
-line-length = 100
+line-length = 120
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B"]
+ignore = ["E501"]
 
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
@@ -69,3 +67,6 @@ build-backend = "setuptools.build_meta"
 where = ["."]
 include = ["pynfse*"]
 
+[tool.setuptools.package-data]
+"pynfse" = ["assets/*"]
+"pynfse.adn" = ["catalogs/*.json", "schemas_xsd/*.xsd"]

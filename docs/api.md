@@ -1,44 +1,91 @@
-# API — referência rápida do `pynfse`
+# API — Referência rápida do `pynfse`
 
 > Navegação: [Início](index.md) · [Guia de uso](usage.md) · [API](api.md) · [Arquitetura](architecture.md) · [Troubleshooting](troubleshooting.md)
 
-Este documento descreve de forma sucinta as classes e funções mais importantes dentro da pasta `pynfse/`.
-
-## `pynfse.cliente_http.ClienteHttp`
-
-- Sessão HTTP baseada em `requests.Session` com retries configurados.
-- Método principal: `enviar_requisicao(metodo: str, url: str, **kwargs) -> requests.Response`
-- Centraliza o envio de requisições usadas pelo cliente NFS-e.
-
-## `pynfse.certificado.GerenciadorCertificadoA1`
-
-Context manager que converte um arquivo `.pfx` para dois arquivos PEM temporários (certificado e chave), retornando uma tupla `(caminho_cert_pem, caminho_key_pem)` no `__enter__` e removendo os arquivos no `__exit__`.
-
-Uso típico: use `GerenciadorCertificadoA1` com o caminho do `.pfx` e a senha do certificado para obter dois arquivos PEM temporários durante o contexto de uso e passá-los ao cliente HTTP quando necessário.
-
-## `pynfse.cliente_nfse.ClienteNfseNacional`
-
-Principais métodos:
-
-- `autenticar() -> bool` — autentica via certificado A1 (se informado) ou via usuário/senha.
-- `obter_cnpj() -> Optional[str]` — retorna o CNPJ/CPF detectado após a autenticação.
-- `listar_notas_emitidas(data_inicio: Optional[str] = None, data_fim: Optional[str] = None) -> Dict[str, Any]` — retorna as notas emitidas ou uma estrutura com `erro` (usa ADN se o certificado digital estiver disponível).
-- `listar_notas_recebidas(data_inicio: Optional[str] = None, data_fim: Optional[str] = None) -> Dict[str, Any]` — consulta notas recebidas no mesmo formato geral (usa ADN se o certificado digital estiver disponível).
-- `baixar_xml(url: str, status: str, data_emissao: Any = None) -> str` — baixa e salva XML com organização por cliente e metadados. Se configurado com certificado digital e a URL pertencer ao ADN, realiza a recuperação automática via ADN.
-- `baixar_pdf(url: str, status: str, data_emissao: Any = None) -> str` — baixa e salva PDF com organização por cliente e metadados. Se configurado com certificado digital, realiza a recuperação automática via ADN.
-- `emitir_nota_simples(payload_dados: Dict[str, Any]) -> None` — envia um DPS (payload livre) para emissão.
-- `obter_impressao_html(chave: str) -> Optional[str]` — recupera o HTML da página de impressão de uma NFS-e a partir da sua chave de acesso de 44 dígitos.
-- `salvar_xml_adn(xml_bytes: bytes, chave: str, status: str = "gerada", data_emissao: Any = None) -> str` — salva o arquivo XML obtido via ADN no diretório correspondente.
-
-Notas:
-
-- Os métodos usam `pynfse.cliente_http.ClienteHttp` para as requisições normais e chamadas diretas ao ADN.
-- Os downloads são implementados de forma a consumir memória de forma eficiente (stream para binários) e criam a estrutura configurada em `save_path`/`path_structure`.
-- Há um mecanismo de fallback para o download de PDFs: caso o download do PDF falhe ou retorne HTTP 403, o cliente tenta buscar o HTML de impressão correspondente via `obter_impressao_html` e o salva com a extensão `.html`.
-- O cliente força `/{STATUS}/{EXT}` na estrutura final quando essas tags não são informadas.
-- O XML é normalizado antes de ser salvo para reduzir espaços extras entre elementos.
+Este documento descreve as classes e funções principais exportadas por `pynfse` e pelo subpacote `pynfse.adn`.
 
 ---
 
-Para detalhes de implementação, consulte os arquivos em `pynfse/`.
+## Módulo Principal (`pynfse`)
 
+### `pynfse.cliente_nfse.ClienteNfseNacional`
+
+Cliente síncrono para autenticação no portal, consulta e download de notas fiscais (via Portal Web ou ADN DFe).
+
+- `autenticar(usar_certificado: bool = True) -> bool` — autentica via Certificado A1 (se configurado) ou via usuário/senha.
+- `obter_cnpj() -> Optional[str]` — retorna o CNPJ/CPF detectado na sessão ou informado na inicialização.
+- `listar_notas_emitidas(data_inicio: Optional[str] = None, data_fim: Optional[str] = None, usar_adn: bool = True) -> Dict[str, Any]` — lista notas emitidas no período (`DD/MM/AAAA`). Quando o certificado está configurado e `usar_adn=True`, consulta o lote DFe na API do ADN.
+- `listar_notas_recebidas(data_inicio: Optional[str] = None, data_fim: Optional[str] = None, usar_adn: bool = True) -> Dict[str, Any]` — lista notas recebidas no período.
+- `baixar_xml(url: str, status: str, data_emissao: Any = None) -> str` — baixa e salva o XML da nota na estrutura configurada (via ADN quando há certificado A1 ou via portal).
+- `baixar_pdf(url: str, status: str, data_emissao: Any = None) -> str` — baixa o PDF da DANFS-e (via ADN ou portal). Caso o portal bloqueie por Captcha/403, gera o PDF offline via `DanfseGenerator` se o XML local existir, ou salva o HTML de impressão como fallback.
+- `obter_impressao_html(chave: str) -> Optional[str]` — recupera o HTML da página de impressão a partir da chave de acesso.
+- `salvar_xml_adn(xml_bytes: bytes, chave: str, status: str = "gerada", data_emissao: Any = None) -> str` — normaliza e salva um XML proveniente do ADN.
+
+### `pynfse.danfse_generator.DanfseGenerator`
+
+Gerador offline de DANFS-e em PDF utilizando `fpdf2` e `qrcode`.
+
+- `DanfseGenerator(xml_path: str, logo_path: Optional[str] = None, status: Optional[str] = None)` — carrega o XML da NFS-e, identifica o município emitente e prepara o brasão/logotipo.
+- `gerar_pdf(output_path: str) -> str` — renderiza o PDF completo da DANFS-e (cabeçalho com QR Code, emitente, tomador, serviço, tributação municipal/federal, totais IBS/CBS da Reforma Tributária e marca d'água para notas canceladas/substituídas).
+
+### `pynfse.xml_parser.extrair_dados_nfse`
+
+- `extrair_dados_nfse(xml_path: str) -> dict` — extrai `numero`, `chave`, `valor`, `valor_servico`, `data_emissao`, `cnpj_prestador`, `cnpj_tomador`, `cpf_tomador`, `nome_tomador`, `descricao_servico` e `status_code` usando apenas a biblioteca padrão (`xml.etree.ElementTree`).
+
+### `pynfse.certificado.GerenciadorCertificadoA1`
+
+- Context manager que converte um arquivo `.pfx` em um par temporário `(cert_pem_path, key_pem_path)` durante o bloco `with` e remove os arquivos temporários com segurança ao sair.
+
+### `pynfse.cliente_http.ClienteHttp`
+
+- Wrapper sobre `requests.Session` com política de retry para falhas transitórias (`500`, `502`, `503`, `504`).
+
+---
+
+## Subpacote Sefin Nacional / ADN v1.01 (`pynfse.adn`)
+
+### `pynfse.adn.adn_client.AdnNfseClient`
+
+Cliente assíncrono (`httpx` + mTLS) para comunicação com a Sefin Nacional e o ADN nos ambientes de `homologacao` (Produção Restrita) e `producao`.
+
+- `emitir_dps(xml_assinado: str, enviar_gzip_json: bool = True) -> Dict[str, Any]` — envia a DPS assinada (`POST /nfse`) e descompacta automaticamente o XML da NFS-e autorizada (`nfseXmlGZipB64`).
+- `enviar_evento(xml_assinado: str, chave_nfse: Optional[str] = None, enviar_gzip_json: bool = True) -> Dict[str, Any]` — registra eventos de cancelamento (`e101101`) ou substituição (`e105102`).
+- `consultar_nfse(chave_acesso: str) -> Dict[str, Any]` — consulta uma NFS-e pela chave de 50 dígitos.
+- `consultar_dps(id_dps: str) -> Dict[str, Any]` — consulta uma DPS pelo identificador de 45 caracteres.
+- `consultar_eventos(chave_acesso: str) -> Dict[str, Any]` — consulta os eventos vinculados a uma NFS-e.
+- `listar_dfe_adn(cnpj: str, ultimo_nsu: int = 0) -> Dict[str, Any]` — consulta lotes de DFe por NSU no ADN (`GET /contribuintes/DFe/{nsu}`).
+- `baixar_danfse(chave_acesso: str) -> Dict[str, Any]` — baixa os bytes do PDF oficial da DANFS-e no ADN.
+- `consultar_parametros_municipais(cod_ibge: str) -> Dict[str, Any]` — consulta convênio e parâmetros do município pelo código IBGE de 7 dígitos.
+
+### `pynfse.adn.dps_builder` & `pynfse.adn.evento_builder`
+
+- `build_dps_xml(prestador, tomador, servico, tributacao, serie_dps="900", numero_dps=1, ...) -> str` — constrói o XML `<DPS versao="1.01">` completo (incluindo substituição `<subst>`, intermediário `<interm>` e grupo `<IBSCBS>`).
+- `formatar_id_dps(cod_municipio, documento_emitente, serie_dps, numero_dps) -> str` — gera o `Id` de 45 caracteres (`DPS` + 42 dígitos).
+- `build_evento_cancelamento_xml(chave_nfse, documento_autor, motivo_codigo=1, motivo_descricao=..., ambiente=2) -> str` — gera o XML `<pedRegEvento versao="1.01">` para o evento `e101101`.
+- `build_evento_substituicao_xml(chave_nfse_substituida, chave_nfse_substituta, documento_autor, ...) -> str` — gera o XML `<pedRegEvento versao="1.01">` para o evento `e105102`.
+
+### `pynfse.adn.tax_calculator`
+
+- `calcular_tributacao(valor_servicos: float, regime_prestador: str = "normal", cClassTrib: str = "000001", ...) -> Dict[str, Any]` — calcula ISSQN, retenções federais e o bloco completo da Reforma Tributária (`vBC` conforme regra E1530 para 2026, 2027–2032 e 2033+, reduções de alíquota por `cClassTrib`, diferimento, crédito presumido, tributação regular e compras governamentais).
+- `validar_regras_ibscbs(c_class_trib: str, cst: Optional[str] = None, ...) -> Dict[str, Any]` — valida as regras de negócio do Anexo VI da NT 1.101 (E0958, E0959, E0964, E0965, E0971, E0972, E1522, E0905, E0910, E0931, E0966, E0967).
+
+### `pynfse.adn.adn_signer.DpsSigner` & `pynfse.adn.xsd_validator.XsdValidator`
+
+- `DpsSigner(pfx_data=None, pfx_password=None, pfx_path=None)`:
+  - `sign_xml(xml_raw: str, tag_to_sign: str = "infDPS") -> str` — assina a tag indicada com XML-DSig Enveloped (`rsa-sha256`).
+  - `gerar_pfx_autoassinado(...) -> bytes` — utilitário para geração de certificados `.pfx` de teste.
+- `XsdValidator`:
+  - `validar_dps(xml_content: str) -> Dict[str, Any]` — valida contra `DPS_v1.01.xsd`.
+  - `validar_evento(xml_content: str) -> Dict[str, Any]` — valida contra `pedRegEvento_v1.01.xsd` ou `evento_v1.01.xsd`.
+  - `validar_nfse(xml_content: str) -> Dict[str, Any]` — valida contra `NFSe_v1.01.xsd`.
+
+### `pynfse.adn.catalog_service`
+
+Funções de consulta aos catálogos oficiais em memória:
+- `listar_cst(apenas_nfse=False)` / `obter_cst(cst)`
+- `listar_cclasstrib(cst=None, apenas_nfse=False, apenas_anexo_viii=False, q=None)` / `obter_cclasstrib(codigo)`
+- `listar_servicos_ctribnac(item_lc116=None, q=None, limite=400)` / `obter_servico_ctribnac(c_trib_nac)`
+- `listar_subitens_lc116()`
+- `buscar_correlacoes_anexo_viii(q=None, item_lc116=None, c_trib_nac=None, c_nbs=None, c_class_trib=None, indop=None, limite=100)`
+- `listar_indop()` / `obter_indop(c_ind_op)`
+- `listar_favoritos()`

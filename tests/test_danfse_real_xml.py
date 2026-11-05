@@ -30,7 +30,7 @@ def test_gerar_danfse_com_xml_real(tmp_path):
         
     print(f"Usando XML real encontrado: {xml_real}")
     
-    pdf_saida = Path(__file__).parent.parent / f"danfse_real_{xml_real.stem}.pdf"
+    pdf_saida = tmp_path / f"danfse_real_{xml_real.stem}.pdf"
     
     # Executa o gerador com o XML real
     generator = DanfseGenerator(str(xml_real), status="NORMAL")

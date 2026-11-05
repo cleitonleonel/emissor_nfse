@@ -2,11 +2,19 @@
 
 > Navegação: [Início](index.md) · [Guia de uso](usage.md) · [API](api.md) · [Arquitetura](architecture.md) · [Troubleshooting](troubleshooting.md)
 
-Este documento mostra os passos mais comuns para utilizar o projeto.
+Este documento mostra os passos mais comuns para instalar e utilizar o `pynfse`.
 
 ## Instalação
 
-Crie um ambiente virtual e escolha uma das formas de instalação abaixo.
+Crie um ambiente virtual (Python 3.12+) e instale o projeto:
+
+### Via `pyproject.toml` (recomendado)
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
+```
 
 ### Via `requirements.txt`
 
@@ -16,42 +24,99 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### Via `pyproject.toml`
+## Configuração (`.env`)
 
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -e .[dev]
-```
-
-## Configuração (variáveis de ambiente)
-
-Crie um arquivo `.env` com as variáveis:
+Crie um arquivo `.env` na raiz do projeto:
 
 ```env
 NFSE_USUARIO=12345678000199
 NFSE_SENHA=sua_senha_aqui
+CERTIFICADO_PATH=/caminho/para/certificado.pfx
+CERTIFICADO_SENHA=senha_do_certificado
 ```
 
-Se for usar certificado A1 (PFX), informe o caminho e senha ao instanciar o cliente:
+## 1. Consultando e baixando notas (`ClienteNfseNacional`)
 
 ```python
-from pynfse.cliente_nfse import ClienteNfseNacional
+from pynfse import ClienteNfseNacional
 
 cliente = ClienteNfseNacional(
+    usuario="12345678000199",
+    senha="sua_senha",
     caminho_pfx="/caminho/para/certificado.pfx",
-    senha_pfx="senha_do_certificado"
+    senha_pfx="senha_do_certificado",
 )
 
 cliente.autenticar()
+resultado = cliente.listar_notas_emitidas("01/09/2025", "30/09/2025")
+
+for nota in resultado.get("notas", []):
+    situacao = nota.get("status_danfs-e", "gerada")
+    data_emissao = nota.get("data_emissao")
+    if nota.get("download_xml"):
+        cliente.baixar_xml(nota["download_xml"], situacao, data_emissao)
+    if nota.get("download_danfs-e"):
+        cliente.baixar_pdf(nota["download_danfs-e"], situacao, data_emissao)
 ```
 
-## Executando o exemplo principal
+### Fallback Inteligente de PDF
 
-O `main.py` carrega o `.env`, autentica e consulta notas de um período definido no próprio arquivo.
+Ao chamar `cliente.baixar_pdf(...)`:
+1. Se o certificado A1 estiver configurado, tenta baixar o PDF oficial na API do ADN.
+2. Caso contrário (ou se falhar), tenta baixar pelo portal web.
+3. Se o portal bloquear o download com Captcha/403:
+   - Se o arquivo `.xml` da nota estiver salvo localmente, gera o PDF oficial offline através do **`DanfseGenerator`**.
+   - Se não houver XML local (acesso apenas com usuário e senha), baixa o HTML da página de impressão e salva como `.html`.
 
-```bash
-python main.py
+## 2. Emitindo DPS v1.01 e Calculando IBS/CBS (`pynfse.adn`)
+
+```python
+import asyncio
+from pynfse import (
+    AdnNfseClient,
+    DpsSigner,
+    XsdValidator,
+    build_dps_xml,
+    calcular_tributacao,
+)
+
+# 1. Calcular tributação (ISSQN + Federais + Reforma Tributária IBS/CBS)
+trib = calcular_tributacao(
+    valor_servicos=1500.00,
+    regime_prestador="simples",
+    cClassTrib="000001",
+    cIndOp="030101",
+    cTribNac="010101",
+    cNBS="115021000",
+)
+
+# 2. Construir XML da DPS v1.01
+xml_dps = build_dps_xml(
+    prestador={"cnpj": "19495981000113", "codigo_municipio": "3201308", "regime": "simples"},
+    tomador={"documento": "12345678000195", "razao_social": "CLIENTE EXEMPLO LTDA"},
+    servico={"cTribNac": "010101", "descricao": "Desenvolvimento de sistema sob medida", "valor": 1500.00},
+    tributacao=trib,
+    serie_dps="900",
+    numero_dps=1,
+    ambiente="homologacao",
+)
+
+# 3. Assinar e validar no XSD v1.01
+signer = DpsSigner(pfx_path="/caminho/para/certificado.pfx", pfx_password="senha")
+xml_assinado = signer.sign_xml(xml_dps, tag_to_sign="infDPS")
+assert XsdValidator.validar_dps(xml_assinado)["valido"] is True
+
+# 4. Transmitir via mTLS para a Sefin Nacional / ADN
+async def emitir():
+    client = AdnNfseClient(
+        ambiente="homologacao",
+        cert_pem=signer.get_pem_certificate(),
+        key_pem=signer.get_pem_private_key(),
+    )
+    resposta = await client.emitir_dps(xml_assinado)
+    print(resposta)
+
+asyncio.run(emitir())
 ```
 
 ## Testes e lint
@@ -60,26 +125,3 @@ python main.py
 pytest -q
 ruff check .
 ```
-
-> Se preferir, você também pode executar explicitamente `pytest -q tests`.
-
-## Downloads
-
-Os arquivos baixados (XML/PDF) seguem a estrutura configurada no cliente:
-
-- diretório base (`save_path`)
-- cliente/empresa (`{CLIENTE}` ou `{CNPJ}`)
-- tipo de consulta (`{TIPO}`)
-- ano, mês e status (`{ANO}`, `{MES}`, `{STATUS}`)
-- pasta por extensão (`{EXT}`)
-
-Por padrão, isso gera uma organização equivalente a `downloads/<cliente>/<tipo>/<ano>/<mes>/<status>/<ext>/`.
-
-### Automação via ADN (Ambiente de Distribuição Nacional)
-
-Se o cliente for instanciado com o caminho e senha do Certificado Digital A1 (`caminho_pfx` e `senha_pfx`), a listagem e os downloads serão direcionados automaticamente para a API oficial do ADN (`adn.nfse.gov.br`). Isso garante maior velocidade e resiliência, pois evita o scraping do portal web e obtém diretamente os arquivos XML (lote de DFe) e PDF.
-
-### Mecanismo de Fallback para PDF
-
-Se o download do PDF oficial falhar (por exemplo, retornando um status HTTP 403 Forbidden), o cliente tentará recuperar o HTML da página de impressão correspondente à chave de 44 dígitos da nota fiscal. Caso tenha sucesso, salvará esse arquivo com a extensão `.html` no mesmo diretório de destino, garantindo que o usuário possua a representação visual da nota.
-

@@ -1,5 +1,3 @@
-from pathlib import Path
-
 from pynfse.danfse_generator import DanfseGenerator
 
 NS = "http://www.sped.fazenda.gov.br/nfse"
@@ -114,7 +112,7 @@ def test_gerar_danfse_completa(tmp_path):
     xml_path = tmp_path / "nfse_teste.xml"
     xml_path.write_text(xml_content, encoding="utf-8")
     
-    pdf_path = Path(__file__).parent.parent / "danfse_teste.pdf"
+    pdf_path = tmp_path / "danfse_teste.pdf"
     
     # 1. Instanciar o gerador com a nota normal
     generator = DanfseGenerator(str(xml_path), status="NORMAL")
@@ -124,7 +122,7 @@ def test_gerar_danfse_completa(tmp_path):
     assert pdf_path.stat().st_size > 0
     
     # 2. Instanciar o gerador com a nota cancelada
-    pdf_cancelada_path = Path(__file__).parent.parent / "danfse_cancelada.pdf"
+    pdf_cancelada_path = tmp_path / "danfse_cancelada.pdf"
     generator_cancelada = DanfseGenerator(str(xml_path), status="CANCELADA")
     generator_cancelada.gerar_pdf(str(pdf_cancelada_path))
     

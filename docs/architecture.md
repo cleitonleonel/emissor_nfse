@@ -2,74 +2,65 @@
 
 > Navegação: [Início](index.md) · [Guia de uso](usage.md) · [API](api.md) · [Arquitetura](architecture.md) · [Troubleshooting](troubleshooting.md)
 
-Esta página explica como o projeto está organizado e como o fluxo principal funciona hoje.
+Esta página explica como o pacote `pynfse` está organizado e como seus módulos interagem.
 
 ## Visão geral
 
-O repositório está organizado em cinco áreas principais:
+O repositório é dividido em camadas claras:
 
-- `main.py`: ponto de entrada e exemplo de uso
-- `pynfse/`: cliente HTTP, certificado A1 e cliente NFS-e
-- `utils/`: ferramentas auxiliares e testes manuais/legados
-- `tests/`: suíte automatizada mantida
-- `docs/`: documentação pública do projeto
-- `pyproject.toml`: configuração de empacotamento e ferramentas de qualidade
+- `pynfse/`: núcleo de automação do portal web, distribuição DFe, parser XML e geração offline de DANFS-e em PDF
+- `pynfse/adn/`: motor completo da Sefin Nacional / ADN v1.01 (catálogos tributários, calculadora IBS/CBS, construtores XML, validador XSD, assinador XML-DSig e cliente mTLS assíncrono)
+- `main.py`: script de entrada para consulta e download de notas
+- `tests/`: suíte de testes automatizados (`pytest`)
+- `docs/`: documentação técnica e enciclopédias de tags da NFS-e Nacional
 
-## Fluxo principal
+## Fluxos principais
 
-1. O `main.py` carrega variáveis de ambiente do `.env`.
-2. O `ClienteNfseNacional` prepara a estrutura de download com base em `save_path` e `path_structure`.
-3. O cliente autentica no portal usando usuário/senha ou certificado A1. A autenticação via certificado A1 realiza um GET no subdomínio `certificado.nfse.gov.br`.
-4. O cliente consulta notas emitidas/recebidas no período informado. Caso o certificado A1 esteja configurado, o cliente consome diretamente a API do Ambiente de Distribuição Nacional (ADN) para obter os dados do DFe por NSU.
-5. Os arquivos XML e PDF são baixados em uma estrutura por cliente, tipo, ano, mês, status e extensão. Se a API de PDF oficial retornar erro ou 403, é realizado um fallback para obter o HTML de impressão e salvá-lo como `.html`.
+### 1. Fluxo de Consulta e Download (`ClienteNfseNacional`)
 
-## Componentes do `pynfse`
+1. O `ClienteNfseNacional` autentica via Certificado A1 (`certificado.nfse.gov.br`) ou via Usuário/Senha no portal web.
+2. Na listagem de notas (`listar_notas_emitidas` / `listar_notas_recebidas`):
+   - **Com Certificado A1 (`usar_adn=True`)**: consome diretamente a API de distribuição do ADN (`/contribuintes/DFe/{nsu}`), descompacta os XMLs em GZip+Base64, filtra por período/tipo e salva os XMLs localmente.
+   - **Sem Certificado (Portal Web)**: realiza o parsing das tabelas HTML de notas emitidas ou recebidas.
+3. No download de PDF (`baixar_pdf`):
+   - Tenta baixar via ADN (se houver certificado) ou via URL do portal.
+   - Se o portal bloquear o download por Captcha/HTTP 403 e o XML correspondente já estiver salvo localmente, aciona o **`DanfseGenerator`** para gerar o PDF oficial offline.
+   - Caso não haja XML local (modo apenas usuário/senha), faz fallback para a página de visualização/impressão (`obter_impressao_html`) e salva como `.html`.
 
-### `pynfse.cliente_http`
+### 2. Fluxo de Emissão e Eventos via Sefin Nacional / ADN v1.01 (`pynfse.adn`)
 
-Responsável pela camada HTTP comum.
-
-- usa `requests.Session`
-- aplica retry para instabilidades transitórias
-- centraliza o envio de requisições
-
-### `pynfse.certificado`
-
-Responsável pelo certificado digital A1.
-
-- converte `.pfx` para PEM temporário
-- remove os arquivos temporários ao final do uso
-
-### `pynfse.cliente_nfse`
-
-Responsável pela integração com o portal do Emissor Nacional e o Ambiente de Distribuição Nacional (ADN).
-
-- autenticação via portal e subdomínio de certificado
-- listagem de notas emitidas e recebidas (via Scraping ou via ADN API usando o certificado)
-- download de XML e PDF com organização flexível por cliente e data
-- fallback de PDF oficial para HTML de visualização/impressão da nota
-- envio de DPS com payload flexível
+1. **Catálogos e Tributação**: `catalog_service` fornece os metadados de `cTribNac`, `cNBS`, `cIndOp`, `CST` e `cClassTrib`, enquanto `calcular_tributacao` e `validar_regras_ibscbs` aplicam as fórmulas da NT 1.101 (ISSQN, retenções federais e IBS/CBS).
+2. **Construção XML**: `build_dps_xml` (emissão/substituição) ou `build_evento_cancelamento_xml` / `build_evento_substituicao_xml` geram o XML no namespace oficial `http://www.sped.fazenda.gov.br/nfse`.
+3. **Assinatura Digital**: `DpsSigner` assina a tag alvo (`infDPS` ou `infPedReg`) usando XML-DSig Enveloped (`rsa-sha256`) com o certificado ICP-Brasil A1.
+4. **Validação XSD Offline**: `XsdValidator` valida o XML assinado contra os schemas oficiais (`DPS_v1.01.xsd`, `pedRegEvento_v1.01.xsd`, `NFSe_v1.01.xsd`).
+5. **Transmissão mTLS**: `AdnNfseClient` compacta o XML em GZip+Base64 e transmite via `httpx` assíncrono com autenticação mTLS para a Sefin Nacional / ADN.
 
 ## Estrutura de diretórios atual
 
 ```text
 emissor_nfse/
 ├── pynfse/
-├── docs/
-├── downloads/
-├── scripts/
-├── tests/
-├── utils/
-├── certificados/
-├── main.py
+│   ├── adn/
+│   │   ├── catalogs/          # Tabelas JSON (CST, cClassTrib, cTribNac, Anexo VIII, cIndOp)
+│   │   ├── schemas_xsd/       # Schemas XSD oficiais v1.01
+│   │   ├── adn_client.py      # Cliente mTLS assíncrono (httpx)
+│   │   ├── adn_signer.py      # Assinador XML-DSig (signxml + cryptography)
+│   │   ├── catalog_service.py # Consultas em memória aos catálogos
+│   │   ├── dps_builder.py     # Construtor XML DPS v1.01
+│   │   ├── evento_builder.py  # Construtor XML de Eventos (e101101 / e105102)
+│   │   ├── tax_calculator.py  # Calculadora e validador tributário NT 1.101
+│   │   └── xsd_validator.py   # Validador XSD com cache LXML
+│   ├── assets/                # Logos da NFS-e e brasões municipais
+│   ├── certificado.py         # Context manager PFX -> PEM temporário
+│   ├── cliente_http.py        # Sessão requests com retry
+│   ├── cliente_nfse.py        # Cliente de portal e distribuição ADN
+│   ├── danfse_generator.py    # Gerador offline de DANFS-e em PDF (fpdf2)
+│   └── xml_parser.py          # Extrator de dados de XML da NFS-e
+├── docs/                      # Documentação e dicionários de tags
+├── scripts/                   # Geração de badge de cobertura
+├── tests/                     # Suíte de testes automatizados (pytest)
+├── main.py                    # Exemplo de uso
+├── pyproject.toml             # Configuração do pacote e ferramentas
 ├── README.md
 └── requirements.txt
 ```
-
-## Observações
-
-- O portal do governo pode mudar HTML e rotas sem aviso.
-- Sempre valide autenticação e consultas após mudanças no portal.
-- A suíte automatizada principal é configurada no `pyproject.toml` e roda na raiz com `pytest -q`.
-- A documentação publicada em GitHub Pages usa os arquivos da pasta `docs/`.
-
