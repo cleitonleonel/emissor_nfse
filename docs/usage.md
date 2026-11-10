@@ -68,52 +68,86 @@ Ao chamar `cliente.baixar_pdf(...)`:
    - Se o arquivo `.xml` da nota estiver salvo localmente, gera o PDF oficial offline através do **`DanfseGenerator`**.
    - Se não houver XML local (acesso apenas com usuário e senha), baixa o HTML da página de impressão e salva como `.html`.
 
-## 2. Emitindo DPS v1.01 e Calculando IBS/CBS (`pynfse.adn`)
+## 2. Emitindo DPS v1.01 com Schemas Pydantic (`pynfse.adn`)
 
 ```python
 import asyncio
+from datetime import datetime
+from decimal import Decimal
 from pynfse import (
+    DPS,
     AdnNfseClient,
     DpsSigner,
+    Endereco,
+    Prestador,
+    Servico,
+    Tomador,
     XsdValidator,
-    build_dps_xml,
-    calcular_tributacao,
 )
 
-# 1. Calcular tributação (ISSQN + Federais + Reforma Tributária IBS/CBS)
-trib = calcular_tributacao(
-    valor_servicos=1500.00,
-    regime_prestador="simples",
-    cClassTrib="000001",
-    cIndOp="030101",
-    cTribNac="010101",
+# 1. Configurar o prestador, tomador e serviço com Schemas Pydantic v2
+prestador = Prestador(
+    cnpj="19495981000113",
+    inscricao_municipal="12345",
+    razao_social="EMPRESA PRESTADORA LTDA",
+    endereco=Endereco(
+        logradouro="Av. Principal",
+        numero="100",
+        bairro="Centro",
+        codigo_municipio=3201308,
+        uf="ES",
+        cep="29140000",
+    ),
+    regime_tributario="simples_nacional",
+)
+
+tomador = Tomador(
+    documento="12345678000195",
+    razao_social="CLIENTE EXEMPLO LTDA",
+    endereco=Endereco(
+        logradouro="Rua das Flores",
+        numero="500",
+        bairro="Jardim",
+        codigo_municipio=3550308,
+        uf="SP",
+        cep="01310100",
+    ),
+)
+
+servico = Servico(
+    codigo_lc116="01.01.01",
+    discriminacao="Desenvolvimento de sistema sob medida",
+    valor_servicos=Decimal("1500.00"),
     cNBS="115021000",
+    cClassTrib="000001",
+    indop="030101",
 )
 
-# 2. Construir XML da DPS v1.01
-xml_dps = build_dps_xml(
-    prestador={"cnpj": "19495981000113", "codigo_municipio": "3201308", "regime": "simples"},
-    tomador={"documento": "12345678000195", "razao_social": "CLIENTE EXEMPLO LTDA"},
-    servico={"cTribNac": "010101", "descricao": "Desenvolvimento de sistema sob medida", "valor": 1500.00},
-    tributacao=trib,
-    serie_dps="900",
-    numero_dps=1,
+# 2. Montar a DPS (calcula automaticamente ISSQN, Federais e IBS/CBS se `tributacao` não for passada)
+dps = DPS(
+    serie="900",
+    numero=1,
+    competencia="2026-11",
+    data_emissao=datetime.now(),
+    prestador=prestador,
+    tomador=tomador,
+    servico=servico,
     ambiente="homologacao",
 )
 
-# 3. Assinar e validar no XSD v1.01
+# 3. Assinar digitalmente (XML-DSig ICP-Brasil A1) e validar contra o XSD v1.01
 signer = DpsSigner(pfx_path="/caminho/para/certificado.pfx", pfx_password="senha")
-xml_assinado = signer.sign_xml(xml_dps, tag_to_sign="infDPS")
+xml_assinado = signer.sign_xml(dps)  # ou: dps.to_signed_xml(signer=signer)
 assert XsdValidator.validar_dps(xml_assinado)["valido"] is True
 
 # 4. Transmitir via mTLS para a Sefin Nacional / ADN
 async def emitir():
     client = AdnNfseClient(
+        cert_path="/caminho/para/certificado.pfx",
+        cert_password="senha",
         ambiente="homologacao",
-        cert_pem=signer.get_pem_certificate(),
-        key_pem=signer.get_pem_private_key(),
     )
-    resposta = await client.emitir_dps(xml_assinado)
+    resposta = await client.emitir_dps(xml_assinado)  # também aceita `await client.emitir_dps(dps)`
     print(resposta)
 
 asyncio.run(emitir())

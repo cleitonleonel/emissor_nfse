@@ -5,13 +5,14 @@ charset-normalizer==3.4.7
 coverage==7.14.0
 cryptography>=43.0.0
 fpdf2>=2.8.7,<3.0.0
-httpx>=0.28.1
-idna==3.15
+httpx2>=2.3.0
+idna>=3.15
 iniconfig==2.3.0
 lxml==6.1.0
 packaging==26.2
 pluggy==1.6.0
 pycparser==3.0
+pydantic>=2.0.0
 Pygments==2.20.0
 pytest==8.4.2
 pytest-cov==4.1.0

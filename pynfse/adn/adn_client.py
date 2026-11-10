@@ -15,7 +15,7 @@ import os
 import tempfile
 from typing import Any, Dict, Optional
 
-import httpx
+import httpx2 as httpx
 
 
 class AdnNfseClient:
@@ -36,6 +36,10 @@ class AdnNfseClient:
         ambiente: str = "homologacao",
         cert_pem: Optional[bytes] = None,
         key_pem: Optional[bytes] = None,
+        cert_path: Optional[str] = None,
+        cert_password: Optional[str] = None,
+        pfx_path: Optional[str] = None,
+        pfx_password: Optional[str] = None,
         timeout: float = 30.0,
     ) -> None:
         amb_norm = (ambiente or "homologacao").strip().lower()
@@ -48,6 +52,16 @@ class AdnNfseClient:
 
         self.base_url = self.URLS[self.ambiente]
         self.adn_url = self.ADN_URLS[self.ambiente]
+        self._signer = None
+        caminho_pfx = cert_path or pfx_path
+        senha_pfx = cert_password if cert_password is not None else pfx_password
+        if caminho_pfx and (cert_pem is None or key_pem is None):
+            from pynfse.adn.adn_signer import DpsSigner
+
+            self._signer = DpsSigner(pfx_path=caminho_pfx, pfx_password=senha_pfx)
+            cert_pem = self._signer.get_pem_certificate()
+            key_pem = self._signer.get_pem_private_key()
+
         self.cert_pem = cert_pem
         self.key_pem = key_pem
         self.timeout = timeout
@@ -112,8 +126,20 @@ class AdnNfseClient:
         finally:
             self._cleanup_mtls()
 
-    async def emitir_dps(self, xml_assinado: str, enviar_gzip_json: bool = True) -> Dict[str, Any]:
-        """Submete a DPS assinada (emissão ou substituição) à Sefin Nacional / ADN."""
+    async def emitir_dps(self, dps_ou_xml: Any, enviar_gzip_json: bool = True) -> Dict[str, Any]:
+        """Submete a DPS (instância do schema `DPS` ou XML assinado) à Sefin Nacional / ADN."""
+        from pynfse.adn.schemas import DPS
+
+        if isinstance(dps_ou_xml, DPS):
+            xml_gerado = dps_ou_xml.to_xml()
+            xml_assinado = (
+                self._signer.sign_xml(xml_gerado, tag_to_sign="infDPS")
+                if self._signer is not None
+                else xml_gerado
+            )
+        else:
+            xml_assinado = str(dps_ou_xml)
+
         url = f"{self.base_url}/nfse"
         cert_files = self._setup_mtls()
         dps_b64 = self.compactar_xml_gzip_b64(xml_assinado)

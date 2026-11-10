@@ -21,10 +21,24 @@ from pynfse.adn.catalog_service import (
     obter_indop,
     obter_servico_ctribnac,
 )
-from pynfse.adn.dps_builder import build_dps_xml, clean_digits, formatar_id_dps
+from pynfse.adn.dps_builder import (
+    build_dps_xml,
+    build_dps_xml_from_schema,
+    clean_digits,
+    formatar_id_dps,
+)
 from pynfse.adn.evento_builder import (
     build_evento_cancelamento_xml,
     build_evento_substituicao_xml,
+)
+from pynfse.adn.schemas import (
+    DPS,
+    Endereco,
+    Intermediario,
+    Prestador,
+    Servico,
+    Substituicao,
+    Tomador,
 )
 from pynfse.adn.tax_calculator import calcular_tributacao, validar_regras_ibscbs
 from pynfse.adn.xsd_validator import XsdValidator
@@ -33,7 +47,15 @@ __all__ = [
     "AdnNfseClient",
     "DpsSigner",
     "XsdValidator",
+    "DPS",
+    "Prestador",
+    "Tomador",
+    "Endereco",
+    "Servico",
+    "Intermediario",
+    "Substituicao",
     "build_dps_xml",
+    "build_dps_xml_from_schema",
     "clean_digits",
     "formatar_id_dps",
     "build_evento_cancelamento_xml",

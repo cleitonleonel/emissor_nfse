@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
@@ -64,8 +64,13 @@ class DpsSigner:
         """Retorna o certificado público em formato PEM."""
         return self.certificate.public_bytes(Encoding.PEM)
 
-    def sign_xml(self, xml_raw: str, tag_to_sign: str = "infDPS") -> str:
-        """Assina a tag referenciada (infDPS, infPedReg, infEvento ou infNFSe) com XML-DSig enveloped."""
+    def sign_xml(self, xml_raw: Any, tag_to_sign: str = "infDPS") -> str:
+        """Assina a tag referenciada (infDPS, infPedReg, infEvento ou infNFSe) com XML-DSig enveloped.
+
+        Aceita tanto uma string XML quanto uma instância do schema `DPS`.
+        """
+        if hasattr(xml_raw, "to_xml") and callable(xml_raw.to_xml):
+            xml_raw = xml_raw.to_xml()
         parser = etree.XMLParser(remove_blank_text=True)
         root = etree.fromstring(xml_raw.encode("utf-8"), parser=parser)
 

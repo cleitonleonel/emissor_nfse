@@ -8,8 +8,15 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from pynfse.adn import (
+    DPS,
     AdnNfseClient,
     DpsSigner,
+    Endereco,
+    Intermediario,
+    Prestador,
+    Servico,
+    Substituicao,
+    Tomador,
     XsdValidator,
     build_dps_xml,
     build_evento_cancelamento_xml,
@@ -103,33 +110,42 @@ def test_pynfse_adn_dps_and_eventos_xsd(sample_pfx: tuple[str, str]):
     pfx_path, pfx_pwd = sample_pfx
     signer = DpsSigner(pfx_path=pfx_path, pfx_password=pfx_pwd)
 
-    prestador = {
-        "cnpj": "19495981000113",
-        "codigo_municipio": "5208707",
-        "regime": "simples",
-        "reg_ap_trib_sn": "1",
-        "reg_esp_trib": "0",
-    }
-    tomador = {
-        "documento": "12345678000195",
-        "razao_social": "TOMADOR TESTE LTDA",
-        "endereco": {
-            "codigo_municipio": "5208707",
-            "cep": "74805100",
-            "logradouro": "AV T-63",
-            "numero": "100",
-            "bairro": "SETOR BUENO",
-        },
-    }
-    servico = {
-        "codigo_municipio_prestacao": "5208707",
-        "cTribNac": "010101",
-        "descricao": "Desenvolvimento de software",
-        "cNBS": "115021000",
-        "valor": 1000.00,
-        "cClassTrib": "000001",
-        "indop": "030101",
-    }
+    prestador = Prestador(
+        cnpj="19495981000113",
+        codigo_municipio="5208707",
+        regime="simples",
+        reg_ap_trib_sn="1",
+        reg_esp_trib="0",
+    )
+    tomador = Tomador(
+        documento="12345678000195",
+        razao_social="TOMADOR TESTE LTDA",
+        endereco=Endereco(
+            codigo_municipio="5208707",
+            cep="74805100",
+            logradouro="AV T-63",
+            numero="100",
+            bairro="SETOR BUENO",
+        ),
+    )
+    servico = Servico(
+        codigo_municipio_prestacao="5208707",
+        cTribNac="010101",
+        descricao="Desenvolvimento de software",
+        cNBS="115021000",
+        valor=1000.00,
+        cClassTrib="000001",
+        indop="030101",
+    )
+    intermediario = Intermediario(
+        documento="11222333000181",
+        razao_social="INTERMEDIARIO LTDA",
+    )
+    substituicao = Substituicao(
+        chSubstda="52087072219495981000113202604000000000000110123456",
+        cMotivo="01",
+        xMotivo="Retificacao de valores na nota fiscal emitida anteriormente",
+    )
     trib = calcular_tributacao(
         valor_servicos=1000.00,
         regime_prestador="simples",
@@ -139,21 +155,36 @@ def test_pynfse_adn_dps_and_eventos_xsd(sample_pfx: tuple[str, str]):
         cNBS="115021000",
     )
 
-    xml_dps = build_dps_xml(
+    dps = DPS(
+        serie="900",
+        numero=1,
+        competencia="2026-11",
         prestador=prestador,
         tomador=tomador,
-        intermediario=None,
+        intermediario=intermediario,
+        substituicao=substituicao,
         servico=servico,
         tributacao=trib,
-        serie_dps="900",
-        numero_dps=1,
         ambiente="homologacao",
     )
+    xml_dps = dps.to_xml()
     assert len(formatar_id_dps("5208707", "19495981000113", "900", 1)) == 45
     assert XsdValidator.validar_dps(xml_dps)["valido"] is True
 
-    xml_dps_signed = signer.sign_xml(xml_dps, tag_to_sign="infDPS")
+    # Também valida cálculo automático de tributação pelo próprio schema DPS (sem passar tributacao explícita)
+    dps_auto = DPS(
+        serie="900",
+        numero=2,
+        prestador=prestador,
+        tomador=tomador,
+        servico=servico,
+        ambiente="homologacao",
+    )
+    assert XsdValidator.validar_dps(build_dps_xml(dps_auto))["valido"] is True
+
+    xml_dps_signed = signer.sign_xml(dps)
     assert XsdValidator.validar_dps(xml_dps_signed)["valido"] is True
+    assert XsdValidator.validar_dps(dps.to_signed_xml(signer=signer))["valido"] is True
 
     chave = "52087072219495981000113202604000000000000110123456"
     xml_canc = build_evento_cancelamento_xml(chave_nfse=chave, documento_autor="19495981000113")

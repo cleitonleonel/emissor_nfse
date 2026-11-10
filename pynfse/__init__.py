@@ -2,10 +2,18 @@
 
 from pynfse import adn
 from pynfse.adn import (
+    DPS,
     AdnNfseClient,
     DpsSigner,
+    Endereco,
+    Intermediario,
+    Prestador,
+    Servico,
+    Substituicao,
+    Tomador,
     XsdValidator,
     build_dps_xml,
+    build_dps_xml_from_schema,
     build_evento_cancelamento_xml,
     build_evento_substituicao_xml,
     calcular_tributacao,
@@ -19,10 +27,18 @@ from pynfse.xml_parser import extrair_dados_nfse
 
 __all__ = [
     "adn",
+    "DPS",
     "AdnNfseClient",
     "DpsSigner",
+    "Endereco",
+    "Intermediario",
+    "Prestador",
+    "Servico",
+    "Substituicao",
+    "Tomador",
     "XsdValidator",
     "build_dps_xml",
+    "build_dps_xml_from_schema",
     "build_evento_cancelamento_xml",
     "build_evento_substituicao_xml",
     "calcular_tributacao",

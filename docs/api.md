@@ -57,9 +57,18 @@ Cliente assíncrono (`httpx` + mTLS) para comunicação com a Sefin Nacional e o
 - `baixar_danfse(chave_acesso: str) -> Dict[str, Any]` — baixa os bytes do PDF oficial da DANFS-e no ADN.
 - `consultar_parametros_municipais(cod_ibge: str) -> Dict[str, Any]` — consulta convênio e parâmetros do município pelo código IBGE de 7 dígitos.
 
-### `pynfse.adn.dps_builder` & `pynfse.adn.evento_builder`
+### `pynfse.adn.schemas`, `pynfse.adn.dps_builder` & `pynfse.adn.evento_builder`
 
-- `build_dps_xml(prestador, tomador, servico, tributacao, serie_dps="900", numero_dps=1, ...) -> str` — constrói o XML `<DPS versao="1.01">` completo (incluindo substituição `<subst>`, intermediário `<interm>` e grupo `<IBSCBS>`).
+- **Schemas Pydantic v2 (`BaseModel`)**:
+  - `DPS(prestador=..., tomador=..., servico=..., serie="900", numero=1, competencia=..., ambiente="homologacao")` — calcula a tributação automaticamente se `tributacao` não for informada e gera o XML via `dps.to_xml()`.
+  - `Prestador(cnpj=..., inscricao_municipal=..., razao_social=..., endereco=Endereco(...), regime_tributario="simples_nacional", ...)`
+  - `Tomador(documento=..., razao_social="Consumidor", endereco=Endereco(...), ...)`
+  - `Endereco(logradouro=..., numero="S/N", bairro=..., codigo_municipio=..., uf=..., cep=...)`
+  - `Servico(valor=..., cTribNac="010101", descricao=..., cNBS=..., cClassTrib="000001", indop="100301", ...)`
+  - `Intermediario(documento=..., razao_social=...)`
+  - `Substituicao(chSubstda=..., cMotivo="99", xMotivo=...)`
+- `build_dps_xml_from_schema(dps: DPS) -> str` — constrói o XML `<DPS versao="1.01">` operando diretamente sobre os atributos validados do schema Pydantic `DPS` (sem conversão para `dict`).
+- `build_dps_xml(prestador, tomador=None, servico=None, tributacao=None, ...) -> str` — aceita uma instância de `DPS` diretamente ou os schemas `Prestador`, `Tomador`, `Servico` (ou `dict` validados via `model_validate`).
 - `formatar_id_dps(cod_municipio, documento_emitente, serie_dps, numero_dps) -> str` — gera o `Id` de 45 caracteres (`DPS` + 42 dígitos).
 - `build_evento_cancelamento_xml(chave_nfse, documento_autor, motivo_codigo=1, motivo_descricao=..., ambiente=2) -> str` — gera o XML `<pedRegEvento versao="1.01">` para o evento `e101101`.
 - `build_evento_substituicao_xml(chave_nfse_substituida, chave_nfse_substituta, documento_autor, ...) -> str` — gera o XML `<pedRegEvento versao="1.01">` para o evento `e105102`.
