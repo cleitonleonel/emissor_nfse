@@ -59,16 +59,36 @@ for nota in resultado.get("notas", []):
         cliente.baixar_pdf(nota["download_danfs-e"], situacao, data_emissao)
 ```
 
-### Fallback Inteligente de PDF
+### Fallback Inteligente de PDF e Reconstrução de XML
 
 Ao chamar `cliente.baixar_pdf(...)`:
 1. Se o certificado A1 estiver configurado, tenta baixar o PDF oficial na API do ADN.
-2. Caso contrário (ou se falhar), tenta baixar pelo portal web.
+2. Caso contrário (ou se a requisição falhar), tenta baixar pelo portal web.
 3. Se o portal bloquear o download com Captcha/403:
-   - Se o arquivo `.xml` da nota estiver salvo localmente, gera o PDF oficial offline através do **`DanfseGenerator`**.
-   - Se não houver XML local (acesso apenas com usuário e senha), baixa o HTML da página de impressão e salva como `.html`.
+   - Se o arquivo `.xml` da nota já estiver salvo localmente, gera o PDF oficial offline através do **`DanfseGenerator`**.
+   - Se não houver XML local (acesso via credenciais usuário/senha), obtém o HTML da página de impressão (`Visualizar/Impressao`), salva como `.html` e **automaticamente reconstrói o `.xml` oficial padrão SPED** via `converter_arquivo_html_para_xml`.
+   - Em seguida, sintetiza imediatamente o `.pdf` da DANFS-e com brasão, QR Code e impostos calculados.
 
-## 2. Emitindo DPS v1.01 com Schemas Pydantic (`pynfse.adn`)
+### 2. Conversão direta de HTML de Impressão para XML (`html_to_xml`)
+
+Quando você já possui o HTML da visualização de impressão da NFS-e (ou fez scraping da tela de impressão):
+
+```python
+from pynfse import DanfseGenerator, converter_arquivo_html_para_xml, converter_html_para_xml
+
+# Opção A: A partir do arquivo .html salvo
+xml_gerado_path = converter_arquivo_html_para_xml("downloads/.../chave.html")
+print(f"XML padrão SPED gerado em: {xml_gerado_path}")
+
+# Opção B: A partir de string HTML em memória
+xml_str = converter_html_para_xml("<html>...</html>")
+
+# Gerando o DANFSe em PDF diretamente a partir do XML reconstruído
+gerador = DanfseGenerator(xml_gerado_path)
+gerador.gerar_pdf("saida_danfse.pdf")
+```
+
+## 3. Emitindo DPS v1.01 com Schemas Pydantic (`pynfse.adn`)
 
 ```python
 import asyncio

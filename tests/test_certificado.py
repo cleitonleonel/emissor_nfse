@@ -61,4 +61,3 @@ def test_context_manager_levanta_erro_quando_pfx_eh_invalido(tmp_path, monkeypat
         assert "Falha ao extrair chave privada ou certificado" in str(exc)
     else:
         raise AssertionError("Era esperado ValueError ao processar o PFX inválido")
-

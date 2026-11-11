@@ -7,14 +7,16 @@ from bs4 import BeautifulSoup
 
 from pynfse.certificado import GerenciadorCertificadoA1
 from pynfse.cliente_http import ClienteHttp
+from pynfse.utils import clean_digits, parse_datetime
 
 logger = logging.getLogger(__name__)
 
 
 class EndpointsNfse:
     """Enumeração das rotas da API do Emissor Nacional de NFS-e."""
+
     BASE_URL = "https://www.nfse.gov.br"
-    ADN_BASE_URL = BASE_URL.replace('www', 'adn')
+    ADN_BASE_URL = BASE_URL.replace("www", "adn")
     LOGIN = f"{BASE_URL}/EmissorNacional/Login"
     DASHBOARD = f"{BASE_URL}/EmissorNacional/Dashboard"
     LOGIN_CERTIFICADO = f"{BASE_URL.replace('www', 'certificado')}/EmissorNacional/Certificado"
@@ -25,6 +27,7 @@ class EndpointsNfse:
 
 class FalhaAutenticacaoError(Exception):
     """Exceção levantada quando as credenciais ou certificado são inválidos."""
+
     pass
 
 
@@ -34,14 +37,16 @@ class ClienteNfseNacional:
     Utiliza composição com o ClienteHttp para realizar as requisições.
     """
 
-    def __init__(self,
-                 usuario: Optional[str] = None,
-                 senha: Optional[str] = None,
-                 caminho_pfx: Optional[str] = None,
-                 senha_pfx: Optional[str] = None,
-                 save_path: Optional[str] = None,
-                 path_structure: Optional[str] = None,
-                 razao_social: Optional[str] = None) -> None:
+    def __init__(
+        self,
+        usuario: Optional[str] = None,
+        senha: Optional[str] = None,
+        caminho_pfx: Optional[str] = None,
+        senha_pfx: Optional[str] = None,
+        save_path: Optional[str] = None,
+        path_structure: Optional[str] = None,
+        razao_social: Optional[str] = None,
+    ) -> None:
         """
         Inicializa o cliente da NFS-e.
 
@@ -65,6 +70,7 @@ class ClienteNfseNacional:
         self._token_csrf: Optional[str] = None
         self._tipo_consulta: Optional[str] = None
         self._cnpj_usuario: Optional[str] = None
+        self._usando_certificado: bool = bool(self.caminho_pfx and self.senha_pfx)
 
     def _preparar_diretorios(self) -> None:
         """Cria diretórios base legados.
@@ -91,35 +97,37 @@ class ClienteNfseNacional:
 
         raise ValueError("Não foi possível localizar o token CSRF na página de login.")
 
+    def _extrair_cnpj_do_texto(self, perfil_text: str) -> Optional[str]:
+        """Extrai CNPJ ou CPF de um texto de perfil do usuário."""
+        logger.info(f"Usuário logado: {perfil_text}")
+        digitos = clean_digits(perfil_text)
+        match = re.search(r"^\d{11,14}$", digitos)
+        if match:
+            cnpj = match.group()
+            self._cnpj_usuario = cnpj
+            logger.info(f"CNPJ extraído: {cnpj}")
+            return cnpj
+        return None
+
     def esta_autenticado(self) -> bool:
         """Verifica se a sessão atual possui acesso ao Dashboard e extrai o CNPJ."""
         resposta = self.http.enviar_requisicao("GET", EndpointsNfse.DASHBOARD)
         soup = BeautifulSoup(resposta.content, "html.parser")
 
         # 1. Layout atual do portal (navbar com span.inscricao)
-        menu_perfil = soup.find('ul', class_='nav navbar-nav navbar-right')
+        menu_perfil = soup.find("ul", class_="nav navbar-nav navbar-right")
         if menu_perfil:
             inscricao = menu_perfil.find("span", class_="inscricao")
             perfil_text = inscricao.text.strip() if inscricao else menu_perfil.text.strip()
-            logger.info(f"Usuário logado: {perfil_text}")
-            digitos = re.sub(r'\D', '', perfil_text)
-            match = re.search(r'^\d{11,14}$', digitos)
-            if match:
-                self._cnpj_usuario = match.group()
-                logger.info(f"CNPJ extraído: {self._cnpj_usuario}")
+            self._extrair_cnpj_do_texto(perfil_text)
             return True
 
         # 2. Layout alternativo/legado do portal (dropdown perfil)
-        menu_perfil_legado = soup.find('li', class_='dropdown perfil')
+        menu_perfil_legado = soup.find("li", class_="dropdown perfil")
         if menu_perfil_legado:
             perfil = menu_perfil_legado.find("li")
             perfil_text = perfil.text.strip() if perfil else menu_perfil_legado.text.strip()
-            logger.info(f"Usuário logado: {perfil_text}")
-            digitos = re.sub(r'\D', '', perfil_text)
-            match = re.search(r'^\d{11,14}$', digitos)
-            if match:
-                self._cnpj_usuario = match.group()
-                logger.info(f"CNPJ extraído: {self._cnpj_usuario}")
+            self._extrair_cnpj_do_texto(perfil_text)
             return True
 
         return False
@@ -130,7 +138,7 @@ class ClienteNfseNacional:
             return self._cnpj_usuario
 
         if self.usuario:
-            apenas_digitos = re.sub(r"\D", "", self.usuario)
+            apenas_digitos = clean_digits(self.usuario)
             if len(apenas_digitos) in (11, 14):
                 return apenas_digitos
 
@@ -139,31 +147,24 @@ class ClienteNfseNacional:
     def autenticar(self, usar_certificado: bool = True) -> bool:
         """
         Realiza a autenticação no portal via Certificado Digital ou Usuário/Senha.
-        
+
         Returns:
             bool: True se a autenticação foi bem sucedida.
-            
+
         Raises:
             FalhaAutenticacaoError: Se as credenciais estiverem ausentes ou inválidas.
         """
         self._obter_token_verificacao()
-        headers_auth = {
-            "origin": EndpointsNfse.BASE_URL,
-            "referer": EndpointsNfse.LOGIN
-        }
+        headers_auth = {"origin": EndpointsNfse.BASE_URL, "referer": EndpointsNfse.LOGIN}
 
         # Lógica refatorada: O context manager fica encapsulado aqui!
         if usar_certificado and self.caminho_pfx and self.senha_pfx:
+            self._usando_certificado = True
             logger.info("Autenticando via Certificado Digital...")
 
             # Os arquivos .pem são criados, usados no GET e imediatamente apagados do disco
             with GerenciadorCertificadoA1(self.caminho_pfx, self.senha_pfx) as cert_pem:
-                self.http.enviar_requisicao(
-                    "GET",
-                    EndpointsNfse.LOGIN_CERTIFICADO,
-                    cert=cert_pem,
-                    headers=headers_auth
-                )
+                self.http.enviar_requisicao("GET", EndpointsNfse.LOGIN_CERTIFICADO, cert=cert_pem, headers=headers_auth)
 
             # Verifica se o cookie de sessão recebido é válido
             if not self.esta_autenticado():
@@ -171,15 +172,12 @@ class ClienteNfseNacional:
             return True
 
         # Fallback para usuário e senha mantido
+        self._usando_certificado = False
         if not self.usuario or not self.senha:
             raise FalhaAutenticacaoError("Credenciais não fornecidas para autenticação.")
 
         logger.info("Autenticando via Usuário e Senha...")
-        payload = {
-            "Inscricao": self.usuario,
-            "Senha": self.senha,
-            "__RequestVerificationToken": self._token_csrf
-        }
+        payload = {"Inscricao": self.usuario, "Senha": self.senha, "__RequestVerificationToken": self._token_csrf}
 
         self.http.enviar_requisicao("POST", EndpointsNfse.LOGIN, data=payload, headers=headers_auth)
 
@@ -187,19 +185,20 @@ class ClienteNfseNacional:
             raise FalhaAutenticacaoError("Falha na autenticação: Usuário ou senha incorretos.")
         return True
 
+    def usa_apenas_credenciais(self) -> bool:
+        """Retorna True se o cliente usa usuário/senha e não possui certificado digital ativo."""
+        tem_certificado = bool(self.caminho_pfx and self.senha_pfx and getattr(self, "_usando_certificado", True))
+        return not tem_certificado and bool(self.usuario and self.senha)
+
     def emitir_nota_simples(self, payload_dados: Dict[str, Any]) -> None:
         """
         Envia os dados de uma Declaração de Prestação de Serviço (DPS) para emitir NFS-e.
         Nota: Este método foi refatorado para receber um dicionário dinâmico.
-        
+
         Args:
             payload_dados (Dict[str, Any]): Dicionário com os dados da nota.
         """
-        self.http.enviar_requisicao(
-            "POST",
-            EndpointsNfse.EMISSAO_DPS,
-            data=payload_dados
-        )
+        self.http.enviar_requisicao("POST", EndpointsNfse.EMISSAO_DPS, data=payload_dados)
 
     def _requisicao_adn(self, metodo: str, url: str, **kwargs: Any) -> Any:
         """Envia requisição usando certificado digital para o ADN."""
@@ -225,13 +224,10 @@ class ClienteNfseNacional:
             backoff = 2
             for tentativa in range(tentativas):
                 try:
-                    resposta = requests.request(
-                        metodo, url, cert=cert_pem, verify=True, headers=headers, **kwargs
-                    )
+                    resposta = requests.request(metodo, url, cert=cert_pem, verify=True, headers=headers, **kwargs)
                     if resposta.status_code == 429:
                         logger.warning(
-                            f"Recebido status 429 (Too Many Requests). "
-                            f"Aguardando {backoff}s para tentar novamente..."
+                            f"Recebido status 429 (Too Many Requests). Aguardando {backoff}s para tentar novamente..."
                         )
                         time.sleep(backoff)
                         backoff *= 2
@@ -242,10 +238,7 @@ class ClienteNfseNacional:
                 except requests.exceptions.RequestException as e:
                     has_resp = hasattr(e, "response") and e.response is not None
                     if has_resp and e.response.status_code == 429:
-                        logger.warning(
-                            f"Recebido status 429. Aguardando {backoff}s "
-                            "para tentar novamente..."
-                        )
+                        logger.warning(f"Recebido status 429. Aguardando {backoff}s para tentar novamente...")
                         time.sleep(backoff)
                         backoff *= 2
                         continue
@@ -254,65 +247,14 @@ class ClienteNfseNacional:
                     time.sleep(1)
 
     def salvar_xml_adn(
-            self,
-            xml_bytes: bytes,
-            chave: str,
-            status: str = "gerada",
-            data_emissao: Any = None,
+        self,
+        xml_bytes: bytes,
+        chave: str,
+        status: str = "gerada",
+        data_emissao: Any = None,
     ) -> str:
         """Salva o XML obtido do ADN no local configurado e retorna o caminho."""
-        nome_arquivo = f"{chave}.xml"
-
-        # Preparação das tags de tempo
-        ano, mes, dia = "0000", "00", "00"
-        if data_emissao:
-            try:
-                if isinstance(data_emissao, str):
-                    from datetime import datetime
-                    if "T" in data_emissao:
-                        dt = datetime.fromisoformat(data_emissao.replace("Z", "+00:00"))
-                    elif "/" in data_emissao:
-                        dt = datetime.strptime(data_emissao, "%d/%m/%Y")
-                    else:
-                        dt = datetime.strptime(data_emissao, "%Y-%m-%d %H:%M:%S")
-                    ano, mes, dia = dt.strftime("%Y"), dt.strftime("%m"), dt.strftime("%d")
-                elif hasattr(data_emissao, "strftime"):
-                    ano = data_emissao.strftime("%Y")
-                    mes = data_emissao.strftime("%m")
-                    dia = data_emissao.strftime("%d")
-            except Exception:
-                pass
-
-        tags = {
-            "{ANO}": ano,
-            "{MES}": mes,
-            "{DIA}": dia,
-            "{CLIENTE}": self.razao_social or self._cnpj_usuario or "CLIENTE_DESCONHECIDO",
-            "{CNPJ}": self._cnpj_usuario or "00000000000000",
-            "{TIPO}": self._tipo_consulta or "outros",
-            "{STATUS}": (status or "gerada").lower(),
-            "{EXT}": "xmls"
-        }
-
-        estrutura = self.path_structure
-        if "{TIPO}" not in estrutura:
-            estrutura += "/{TIPO}"
-        if "{STATUS}" not in estrutura:
-            estrutura += "/{STATUS}"
-        if "{EXT}" not in estrutura:
-            estrutura += "/{EXT}"
-
-        caminho_relativo = estrutura
-        for tag, val in tags.items():
-            caminho_relativo = caminho_relativo.replace(tag, val)
-
-        caminho_final = Path(self.save_path)
-        for part in [p for p in caminho_relativo.replace("\\", "/").split("/") if p.strip()]:
-            caminho_final = caminho_final / part
-
-        caminho_final.mkdir(parents=True, exist_ok=True)
-        caminho_completo = caminho_final / nome_arquivo
-
+        caminho_completo = self._montar_caminho_destino(chave, "xml", status, data_emissao)
         try:
             conteudo_xml = re.sub(r">\s+<", "><", xml_bytes.decode("utf-8").strip())
             caminho_completo.write_text(conteudo_xml, encoding="utf-8")
@@ -325,12 +267,8 @@ class ClienteNfseNacional:
     def obter_impressao_html(self, chave: str) -> Optional[str]:
         """Recupera o HTML da página de impressão da nota a partir da chave de 44 dígitos."""
         try:
-            visualizar_url = (
-                f"{EndpointsNfse.BASE_URL}/EmissorNacional/Notas/Visualizar/Index/{chave}"
-            )
-            logger.info(
-                f"Carregando visualizador para extrair link de impressão: {visualizar_url}"
-            )
+            visualizar_url = f"{EndpointsNfse.BASE_URL}/EmissorNacional/Notas/Visualizar/Index/{chave}"
+            logger.info(f"Carregando visualizador para extrair link de impressão: {visualizar_url}")
             resp = self.http.enviar_requisicao("GET", visualizar_url)
             soup = BeautifulSoup(resp.content, "html.parser")
 
@@ -353,10 +291,10 @@ class ClienteNfseNacional:
             return None
 
     def _listar_notas_adn(
-            self,
-            tipo: str,
-            data_inicio: Optional[str] = None,
-            data_fim: Optional[str] = None,
+        self,
+        tipo: str,
+        data_inicio: Optional[str] = None,
+        data_fim: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Busca notas no Ambiente de Distribuição Nacional (ADN) usando o certificado."""
         import base64
@@ -375,16 +313,12 @@ class ClienteNfseNacional:
         dt_fim = None
         if data_inicio:
             try:
-                dt_inicio = datetime.datetime.strptime(
-                    data_inicio, "%d/%m/%Y"
-                ).replace(hour=0, minute=0, second=0)
+                dt_inicio = datetime.datetime.strptime(data_inicio, "%d/%m/%Y").replace(hour=0, minute=0, second=0)
             except ValueError:
                 pass
         if data_fim:
             try:
-                dt_fim = datetime.datetime.strptime(
-                    data_fim, "%d/%m/%Y"
-                ).replace(hour=23, minute=59, second=59)
+                dt_fim = datetime.datetime.strptime(data_fim, "%d/%m/%Y").replace(hour=23, minute=59, second=59)
             except ValueError:
                 pass
 
@@ -394,19 +328,14 @@ class ClienteNfseNacional:
 
         try:
             while paginas < 50:
-                url = (
-                    f"{EndpointsNfse.ADN_BASE_URL}/contribuintes/DFe/{nsu:020d}"
-                    f"?cnpjConsulta={cnpj}"
-                )
+                url = f"{EndpointsNfse.ADN_BASE_URL}/contribuintes/DFe/{nsu:020d}?cnpjConsulta={cnpj}"
                 logger.info(f"Buscando lote DFe no ADN (NSU={nsu})...")
                 try:
                     resp = self._requisicao_adn("GET", url)
                 except Exception as ex:
                     import requests
-                    has_resp = (
-                            isinstance(ex, requests.exceptions.HTTPError)
-                            and ex.response is not None
-                    )
+
+                    has_resp = isinstance(ex, requests.exceptions.HTTPError) and ex.response is not None
                     if has_resp and ex.response.status_code == 404:
                         logger.info("Fim da lista de documentos (ADN retornou 404).")
                         break
@@ -428,6 +357,7 @@ class ClienteNfseNacional:
 
                     # Parseia dados do XML temporariamente
                     from pynfse.xml_parser import extrair_dados_nfse
+
                     with tempfile.NamedTemporaryFile(delete=False, suffix=".xml") as temp_xml:
                         temp_xml.write(xml_bytes)
                         temp_xml_path = temp_xml.name
@@ -450,8 +380,8 @@ class ClienteNfseNacional:
                     cnpj_prestador = dados_parsed.get("cnpj_prestador")
                     cnpj_tomador = dados_parsed.get("cnpj_tomador")
 
-                    is_emitida = (cnpj_prestador == cnpj)
-                    is_recebida = (cnpj_tomador == cnpj)
+                    is_emitida = cnpj_prestador == cnpj
+                    is_recebida = cnpj_tomador == cnpj
 
                     if tipo == "emitidas" and not is_emitida:
                         continue
@@ -466,26 +396,19 @@ class ClienteNfseNacional:
                     else:
                         status_limpo = "gerada"
 
-                    xml_path = self.salvar_xml_adn(
-                        xml_bytes, dados_parsed["chave"], status_limpo, dt_emi
-                    )
+                    xml_path = self.salvar_xml_adn(xml_bytes, dados_parsed["chave"], status_limpo, dt_emi)
 
                     item_nota = {
-                        "download_xml": (
-                            f"{EndpointsNfse.ADN_BASE_URL}/xml/{dados_parsed['chave']}"
-                        ),
-                        "download_danfs-e": (
-                            f"{EndpointsNfse.ADN_BASE_URL}/danfse/{dados_parsed['chave']}"
-                        ),
+                        "download_xml": (f"{EndpointsNfse.ADN_BASE_URL}/xml/{dados_parsed['chave']}"),
+                        "download_danfs-e": (f"{EndpointsNfse.ADN_BASE_URL}/danfse/{dados_parsed['chave']}"),
                         "visualizar": (
-                            f"{EndpointsNfse.BASE_URL}/EmissorNacional/Notas/"
-                            f"Visualizar/Index/{dados_parsed['chave']}"
+                            f"{EndpointsNfse.BASE_URL}/EmissorNacional/Notas/Visualizar/Index/{dados_parsed['chave']}"
                         ),
                         "status_danfs-e": status_limpo,
                         "valor": f"R$ {dados_parsed.get('valor', 0.0):.2f}".replace(".", ","),
                         "data_emissao": dt_emi.strftime("%d/%m/%Y") if dt_emi else "",
                         "numero": dados_parsed.get("numero") or dados_parsed["chave"],
-                        "xml_path_saved": xml_path
+                        "xml_path_saved": xml_path,
                     }
                     dados_notas.append(item_nota)
 
@@ -500,253 +423,134 @@ class ClienteNfseNacional:
             logger.error(f"Erro ao listar notas via ADN: {e}")
             return {"notas": [], "erro": f"Erro na consulta do ADN: {e}"}
 
-    def listar_notas_emitidas(
-            self,
-            data_inicio: Optional[str] = None,
-            data_fim: Optional[str] = None,
-            usar_adn: bool = True,
+    def _listar_notas_portal(
+        self,
+        tipo: str,
+        endpoint: str,
+        data_inicio: Optional[str] = None,
+        data_fim: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """
-        Lista as notas fiscais emitidas em um período.
-        """
+        """Consulta e processa notas emitidas ou recebidas a partir do portal web."""
+        self.define_tipo_consulta(tipo)
+        params = {}
+        if data_inicio and data_fim:
+            params = {
+                "busca": "",
+                "datainicio": data_inicio,
+                "datafim": data_fim,
+            }
+
+        self.http.sessao.headers.update({"Referer": endpoint})
+        resposta = self.http.enviar_requisicao("GET", endpoint, params=params)
+        soup = BeautifulSoup(resposta.content, "html.parser")
+        corpo_tabela = soup.find("tbody")
+
+        if not corpo_tabela:
+            msg_erro_padrao = soup.find("span", {"class": "field-validation-error"})
+            msg_sem_registro = soup.find("span", {"class": "sem-registros"})
+
+            mensagem = "Erro desconhecido ao listar notas."
+            if msg_erro_padrao:
+                mensagem = msg_erro_padrao.get_text(strip=True)
+            elif msg_sem_registro:
+                mensagem = msg_sem_registro.get_text(strip=True)
+
+            msg_txt = msg_sem_registro.get_text(strip=True) if msg_sem_registro else mensagem
+            return {"notas": [], "erro": msg_txt}
+
+        linhas = corpo_tabela.find_all("tr")
+        dados_notas = []
+        chaves_remover = {"cancelar_nfs-e", "substituir"} if tipo == "emitidas" else {"rejeitar", "confirmar"}
+
+        for linha in linhas:
+            div_opcoes = linha.find("div", {"class": "list-group menu-content"})
+            if not div_opcoes:
+                continue
+
+            default_status = "unknown" if tipo == "emitidas" else "SITUACAO_GERADA"
+            raw_status = linha.get("data-situacao", default_status)
+            status = raw_status if isinstance(raw_status, str) else str(raw_status)
+
+            colunas = linha.find_all("td")
+            data_emissao = ""
+            numero = ""
+
+            valor = linha.get("data-valor")
+            if not valor:
+                col_valor = linha.find("td", {"class": "td-valor"})
+                if col_valor:
+                    valor = col_valor.get_text(strip=True)
+            if not valor:
+                valor = "0,00"
+
+            for col in colunas:
+                txt = col.get_text(strip=True)
+                if re.match(r"\d{2}/\d{2}/\d{4}", txt):
+                    data_emissao = txt
+                elif "R$" in txt:
+                    valor = txt
+                elif txt.isdigit() and len(txt) < 15:
+                    numero = txt
+
+            links = {}
+            base = EndpointsNfse.BASE_URL
+            for item in div_opcoes.find_all("a"):
+                key = item.get_text(strip=True).replace(" ", "_").lower()
+                links[key] = f"{base}{item['href']}"
+
+            for k in chaves_remover:
+                links.pop(k, None)
+
+            links.update(
+                {
+                    "status_danfs-e": status.split("_")[-1].lower(),
+                    "valor": valor,
+                    "data_emissao": data_emissao,
+                    "numero": numero,
+                }
+            )
+            dados_notas.append(links)
+
+        return {"notas": dados_notas}
+
+    def listar_notas_emitidas(
+        self,
+        data_inicio: Optional[str] = None,
+        data_fim: Optional[str] = None,
+        usar_adn: bool = True,
+    ) -> Dict[str, Any]:
+        """Lista as notas fiscais emitidas em um período."""
         if usar_adn and self.caminho_pfx and self.senha_pfx:
             return self._listar_notas_adn("emitidas", data_inicio, data_fim)
-
-        self.define_tipo_consulta("emitidas")
-        params = {}
-        if data_inicio and data_fim:
-            params = {
-                "busca": "",
-                "datainicio": data_inicio,
-                "datafim": data_fim
-            }
-
-        self.http.sessao.headers.update({"Referer": EndpointsNfse.NOTAS_EMITIDAS})
-        resposta = self.http.enviar_requisicao("GET", EndpointsNfse.NOTAS_EMITIDAS, params=params)
-        soup = BeautifulSoup(resposta.content, "html.parser")
-        corpo_tabela = soup.find("tbody")
-
-        if not corpo_tabela:
-            msg_erro_padrao = soup.find("span", {"class": "field-validation-error"})
-            msg_sem_registro = soup.find("span", {"class": "sem-registros"})
-
-            mensagem = "Erro desconhecido ao listar notas."
-            if msg_erro_padrao:
-                mensagem = msg_erro_padrao.get_text(strip=True)
-            elif msg_sem_registro:
-                mensagem = msg_sem_registro.get_text(strip=True)
-
-            msg_txt = msg_sem_registro.get_text(strip=True) if msg_sem_registro else mensagem
-            return {"notas": [], "erro": msg_txt}
-
-        linhas = corpo_tabela.find_all("tr")
-        dados_notas = []
-
-        for linha in linhas:
-            div_opcoes = linha.find("div", {"class": "list-group menu-content"})
-            if not div_opcoes:
-                continue
-
-            raw_status = linha.get("data-situacao", "unknown")
-            status = raw_status if isinstance(raw_status, str) else str(raw_status)
-
-            colunas = linha.find_all("td")
-            data_emissao = ""
-            numero = ""
-
-            valor = linha.get("data-valor")
-            if not valor:
-                col_valor = linha.find("td", {"class": "td-valor"})
-                if col_valor:
-                    valor = col_valor.get_text(strip=True)
-            if not valor:
-                valor = "0,00"
-
-            for col in colunas:
-                txt = col.get_text(strip=True)
-                if re.match(r'\d{2}/\d{2}/\d{4}', txt):
-                    data_emissao = txt
-                elif "R$" in txt:
-                    valor = txt
-                elif txt.isdigit() and len(txt) < 15:
-                    numero = txt
-
-            links = {}
-            base = EndpointsNfse.BASE_URL
-            for item in div_opcoes.find_all("a"):
-                key = item.get_text(strip=True).replace(" ", "_").lower()
-                links[key] = f"{base}{item['href']}"
-
-            links.update({
-                "status_danfs-e": status.split("_")[-1].lower(),
-                "valor": valor,
-                "data_emissao": data_emissao,
-                "numero": numero
-            })
-            links.pop("cancelar_nfs-e", None)
-            links.pop("substituir", None)
-
-            dados_notas.append(links)
-
-        return {"notas": dados_notas}
+        return self._listar_notas_portal("emitidas", EndpointsNfse.NOTAS_EMITIDAS, data_inicio, data_fim)
 
     def listar_notas_recebidas(
-            self,
-            data_inicio: Optional[str] = None,
-            data_fim: Optional[str] = None,
-            usar_adn: bool = True,
+        self,
+        data_inicio: Optional[str] = None,
+        data_fim: Optional[str] = None,
+        usar_adn: bool = True,
     ) -> Dict[str, Any]:
-        """
-        Lista as notas fiscais emitidas contra um cnpj em um determinado período.
-        """
+        """Lista as notas fiscais emitidas contra um cnpj em um determinado período."""
         if usar_adn and self.caminho_pfx and self.senha_pfx:
             return self._listar_notas_adn("recebidas", data_inicio, data_fim)
-
-        self.define_tipo_consulta("recebidas")
-        params = {}
-        if data_inicio and data_fim:
-            params = {
-                "busca": "",
-                "datainicio": data_inicio,
-                "datafim": data_fim
-            }
-
-        self.http.sessao.headers.update({"Referer": EndpointsNfse.NOTAS_RECEBIDAS})
-        resposta = self.http.enviar_requisicao("GET", EndpointsNfse.NOTAS_RECEBIDAS, params=params)
-        soup = BeautifulSoup(resposta.content, "html.parser")
-        corpo_tabela = soup.find("tbody")
-
-        if not corpo_tabela:
-            msg_erro_padrao = soup.find("span", {"class": "field-validation-error"})
-            msg_sem_registro = soup.find("span", {"class": "sem-registros"})
-
-            mensagem = "Erro desconhecido ao listar notas."
-            if msg_erro_padrao:
-                mensagem = msg_erro_padrao.get_text(strip=True)
-            elif msg_sem_registro:
-                mensagem = msg_sem_registro.get_text(strip=True)
-
-            msg_txt = msg_sem_registro.get_text(strip=True) if msg_sem_registro else mensagem
-            return {"notas": [], "erro": msg_txt}
-
-        linhas = corpo_tabela.find_all("tr")
-        dados_notas = []
-
-        for linha in linhas:
-            div_opcoes = linha.find("div", {"class": "list-group menu-content"})
-            if not div_opcoes:
-                continue
-
-            raw_status = linha.get("data-situacao", "SITUACAO_GERADA")
-            status = raw_status if isinstance(raw_status, str) else str(raw_status)
-
-            colunas = linha.find_all("td")
-            data_emissao = ""
-            numero = ""
-
-            valor = linha.get("data-valor")
-            if not valor:
-                col_valor = linha.find("td", {"class": "td-valor"})
-                if col_valor:
-                    valor = col_valor.get_text(strip=True)
-            if not valor:
-                valor = "0,00"
-
-            for col in colunas:
-                txt = col.get_text(strip=True)
-                if re.match(r'\d{2}/\d{2}/\d{4}', txt):
-                    data_emissao = txt
-                elif "R$" in txt:
-                    valor = txt
-                elif txt.isdigit() and len(txt) < 15:
-                    numero = txt
-
-            links = {}
-            base = EndpointsNfse.BASE_URL
-            for item in div_opcoes.find_all("a"):
-                key = item.get_text(strip=True).replace(" ", "_").lower()
-                links[key] = f"{base}{item['href']}"
-            links.pop("rejeitar", None)
-            links.pop("confirmar", None)
-
-            links.update({
-                "status_danfs-e": status.split("_")[-1].lower(),
-                "valor": valor,
-                "data_emissao": data_emissao,
-                "numero": numero
-            })
-            dados_notas.append(links)
-
-        return {"notas": dados_notas}
+        return self._listar_notas_portal("recebidas", EndpointsNfse.NOTAS_RECEBIDAS, data_inicio, data_fim)
 
     def define_tipo_consulta(self, tipo_consulta: str) -> None:
         """Define o tipo de consulta atual."""
         self._tipo_consulta = tipo_consulta
 
     def _baixar_arquivo(
-            self,
-            url: str,
-            extensao: str,
-            status: str = "",
-            data_emissao: Any = None,
+        self,
+        url: str,
+        extensao: str,
+        status: str = "",
+        data_emissao: Any = None,
     ) -> str:
         """Baixa XML/PDF e grava em uma estrutura dinâmica por cliente, tipo, data,
         status e extensão.
         """
-        nome_arquivo = f"{url.split('/')[-1]}.{extensao}"
-
-        # Preparação das tags de tempo
-        ano, mes, dia = "0000", "00", "00"
-        if data_emissao:
-            try:
-                if isinstance(data_emissao, str):
-                    from datetime import datetime
-                    if "T" in data_emissao:
-                        dt = datetime.fromisoformat(data_emissao.replace("Z", "+00:00"))
-                    elif "/" in data_emissao:
-                        dt = datetime.strptime(data_emissao, "%d/%m/%Y")
-                    else:
-                        dt = datetime.strptime(data_emissao, "%Y-%m-%d %H:%M:%S")
-                    ano, mes, dia = dt.strftime("%Y"), dt.strftime("%m"), dt.strftime("%d")
-                elif hasattr(data_emissao, "strftime"):
-                    ano = data_emissao.strftime("%Y")
-                    mes = data_emissao.strftime("%m")
-                    dia = data_emissao.strftime("%d")
-            except ValueError:
-                pass
-
-        # Tags disponíveis
-        tags = {
-            "{ANO}": ano,
-            "{MES}": mes,
-            "{DIA}": dia,
-            "{CLIENTE}": self.razao_social or self._cnpj_usuario or "CLIENTE_DESCONHECIDO",
-            "{CNPJ}": self._cnpj_usuario or "00000000000000",
-            "{TIPO}": self._tipo_consulta or "outros",
-            "{STATUS}": (status or "gerada").lower(),
-            "{EXT}": f"{extensao}s"
-        }
-
-        estrutura = self.path_structure
-        if "{TIPO}" not in estrutura:
-            estrutura += "/{TIPO}"
-        if "{STATUS}" not in estrutura:
-            estrutura += "/{STATUS}"
-        if "{EXT}" not in estrutura:
-            estrutura += "/{EXT}"
-
-        # Aplica as tags na estrutura
-        caminho_relativo = estrutura
-        for tag, val in tags.items():
-            caminho_relativo = caminho_relativo.replace(tag, val)
-
-        # Constrói o caminho final absoluto/relativo ao CWD usando Path do pathlib
-        caminho_final = Path(self.save_path)
-        for part in [p for p in caminho_relativo.replace("\\", "/").split("/") if p.strip()]:
-            caminho_final = caminho_final / part
-
-        caminho_final.mkdir(parents=True, exist_ok=True)
-        caminho_completo = caminho_final / nome_arquivo
+        chave = (url or "").rstrip("/").split("/")[-1]
+        caminho_completo = self._montar_caminho_destino(chave, extensao, status, data_emissao)
 
         try:
             if extensao.lower() == "xml":
@@ -756,16 +560,28 @@ class ClienteNfseNacional:
                 # Check dynamically if Captcha challenge was returned
                 resposta_url = getattr(resposta, "url", "")
                 if (
-                        "ModalCaptcha" in resposta_url
-                        or "ModalCaptcha" in conteudo
-                        or conteudo.lower().startswith("<html")
-                        or conteudo.lower().startswith("<!doctype")
-                        or not (conteudo.startswith("<") or conteudo.startswith("<?xml"))
+                    "ModalCaptcha" in resposta_url
+                    or "ModalCaptcha" in conteudo
+                    or conteudo.lower().startswith("<html")
+                    or conteudo.lower().startswith("<!doctype")
+                    or not (conteudo.startswith("<") or conteudo.startswith("<?xml"))
                 ):
+                    chave_nota = url.split("/")[-1]
                     logger.warning(
                         "Download de XML exige resolução de Captcha. "
-                        "Retornando vazio."
+                        f"Tentando converter HTML de impressão para XML ({chave_nota})..."
                     )
+                    html_content = self.obter_impressao_html(chave_nota)
+                    if html_content:
+                        try:
+                            from pynfse.html_to_xml import converter_html_para_xml
+
+                            conteudo_xml = converter_html_para_xml(html_content)
+                            caminho_completo.write_text(conteudo_xml, encoding="utf-8")
+                            logger.info(f"XML reconstruído do HTML salvo em: {caminho_completo}")
+                            return str(caminho_completo)
+                        except Exception as conv_err:
+                            logger.warning(f"Não foi possível converter HTML em XML: {conv_err}")
                     return ""
 
                 conteudo_xml = re.sub(r">\s+<", "><", conteudo)
@@ -810,74 +626,23 @@ class ClienteNfseNacional:
             logger.error(f"Erro ao baixar {extensao}: {e}")
             return ""
 
-    def baixar_xml(self, url: str, status: str, data_emissao: Any = None) -> str:
-        """Baixa o XML de uma nota e salva no disco usando a estrutura configurada."""
-        if self.caminho_pfx and self.senha_pfx:
-            chave = url.split("/")[-1]
-            logger.info(f"Recuperando XML via ADN para chave: {chave}")
-
-            cnpj = self.obter_cnpj()
-            nsu = 0
-            paginas = 0
-            while paginas < 50:
-                adn_url = (
-                    f"{EndpointsNfse.ADN_BASE_URL}/contribuintes/DFe/{nsu:020d}"
-                    f"?cnpjConsulta={cnpj}"
-                )
-                try:
-                    resp = self._requisicao_adn("GET", adn_url)
-                except Exception as ex:
-                    import requests
-                    has_resp = (
-                            isinstance(ex, requests.exceptions.HTTPError)
-                            and ex.response is not None
-                    )
-                    if has_resp and ex.response.status_code == 404:
-                        logger.info("Fim da lista de documentos (ADN retornou 404).")
-                        break
-                    raise ex
-                lote = resp.json().get("LoteDFe", [])
-                if not lote:
-                    break
-
-                for doc in lote:
-                    if doc.get("ChaveAcesso") == chave:
-                        import base64
-                        import gzip
-                        xml_bytes = gzip.decompress(base64.b64decode(doc["ArquivoXml"]))
-                        return self.salvar_xml_adn(xml_bytes, chave, status, data_emissao)
-
-                max_nsu = max(doc["NSU"] for doc in lote)
-                nsu = max_nsu + 1
-                paginas += 1
-
-            logger.warning(f"Chave {chave} não encontrada no ADN.")
-
-        return self._baixar_arquivo(url, "xml", status, data_emissao)
-
-    def baixar_pdf(self, url: str, status: str, data_emissao: Any = None) -> str:
-        """Baixa o PDF de uma nota e salva no disco usando a estrutura configurada."""
-        chave = url.split("/")[-1]
-        nome_arquivo = f"{chave}.pdf"
+    def _montar_caminho_destino(
+        self,
+        chave: str,
+        extensao: str,
+        status: str = "",
+        data_emissao: Any = None,
+    ) -> Path:
+        """Monta o caminho completo de destino para salvar arquivos (xml, pdf, html)."""
+        ext_norm = extensao.lower().lstrip(".")
+        pasta_ext = "pdfs" if ext_norm in ("pdf", "html") else f"{ext_norm}s"
+        nome_arquivo = f"{chave}.{ext_norm}"
 
         ano, mes, dia = "0000", "00", "00"
         if data_emissao:
-            try:
-                if isinstance(data_emissao, str):
-                    from datetime import datetime
-                    if "T" in data_emissao:
-                        dt = datetime.fromisoformat(data_emissao.replace("Z", "+00:00"))
-                    elif "/" in data_emissao:
-                        dt = datetime.strptime(data_emissao, "%d/%m/%Y")
-                    else:
-                        dt = datetime.strptime(data_emissao, "%Y-%m-%d %H:%M:%S")
-                    ano, mes, dia = dt.strftime("%Y"), dt.strftime("%m"), dt.strftime("%d")
-                elif hasattr(data_emissao, "strftime"):
-                    ano = data_emissao.strftime("%Y")
-                    mes = data_emissao.strftime("%m")
-                    dia = data_emissao.strftime("%d")
-            except Exception:
-                pass
+            dt = parse_datetime(data_emissao)
+            if dt:
+                ano, mes, dia = dt.strftime("%Y"), dt.strftime("%m"), dt.strftime("%d")
 
         tags = {
             "{ANO}": ano,
@@ -887,7 +652,7 @@ class ClienteNfseNacional:
             "{CNPJ}": self._cnpj_usuario or "00000000000000",
             "{TIPO}": self._tipo_consulta or "outros",
             "{STATUS}": (status or "gerada").lower(),
-            "{EXT}": "pdfs"
+            "{EXT}": pasta_ext,
         }
 
         estrutura = self.path_structure
@@ -907,7 +672,120 @@ class ClienteNfseNacional:
             caminho_final = caminho_final / part
 
         caminho_final.mkdir(parents=True, exist_ok=True)
-        caminho_completo = caminho_final / nome_arquivo
+        return caminho_final / nome_arquivo
+
+    def baixar_via_impressao_html(
+        self,
+        url_ou_chave: str,
+        status: str = "gerada",
+        data_emissao: Any = None,
+    ) -> Dict[str, str]:
+        """
+        Obtém diretamente o HTML de impressão da nota (sem tentar download direto de XML/PDF)
+        e a partir dele gera o arquivo XML e o PDF (DANFSe).
+        """
+        chave = (url_ou_chave or "").rstrip("/").split("/")[-1]
+        if not chave:
+            return {"html_path": "", "xml_path": "", "pdf_path": ""}
+
+        caminho_xml = self._montar_caminho_destino(chave, "xml", status, data_emissao)
+        caminho_pdf = self._montar_caminho_destino(chave, "pdf", status, data_emissao)
+        caminho_html = caminho_pdf.with_suffix(".html")
+
+        if not caminho_xml.exists() and not caminho_html.exists():
+            logger.info(
+                f"Cliente autenticado via usuário e senha (sem certificado). "
+                f"Obtendo HTML de impressão diretamente para a chave: {chave}"
+            )
+            html_content = self.obter_impressao_html(chave)
+            if html_content:
+                caminho_html.write_text(html_content, encoding="utf-8")
+                logger.info(f"HTML de impressão salvo em: {caminho_html}")
+            else:
+                logger.warning(f"Não foi possível obter o HTML de impressão para a chave: {chave}")
+                return {"html_path": "", "xml_path": "", "pdf_path": ""}
+
+        if not caminho_xml.exists() and caminho_html.exists():
+            try:
+                from pynfse.html_to_xml import converter_arquivo_html_para_xml
+
+                converter_arquivo_html_para_xml(caminho_html, caminho_xml)
+            except Exception as conv_err:
+                logger.warning(f"Falha ao converter HTML para XML local ({chave}): {conv_err}")
+
+        if not caminho_pdf.exists() and caminho_xml.exists():
+            try:
+                from pynfse.danfse_generator import DanfseGenerator
+
+                generator = DanfseGenerator(str(caminho_xml), status=status)
+                generator.gerar_pdf(str(caminho_pdf))
+                logger.info(f"PDF gerado offline com sucesso em: {caminho_pdf}")
+            except Exception as ex:
+                logger.error(f"Erro ao gerar PDF offline ({chave}): {ex}")
+
+        return {
+            "html_path": str(caminho_html) if caminho_html.exists() else "",
+            "xml_path": str(caminho_xml) if caminho_xml.exists() else "",
+            "pdf_path": str(caminho_pdf) if caminho_pdf.exists() else "",
+        }
+
+    def baixar_xml(self, url: str, status: str, data_emissao: Any = None) -> str:
+        """Baixa o XML de uma nota e salva no disco usando a estrutura configurada."""
+        if self.usa_apenas_credenciais():
+            res = self.baixar_via_impressao_html(url, status, data_emissao)
+            xml_path = res.get("xml_path", "")
+            if xml_path:
+                return xml_path
+
+        if self.caminho_pfx and self.senha_pfx:
+            chave = url.split("/")[-1]
+            logger.info(f"Recuperando XML via ADN para chave: {chave}")
+
+            cnpj = self.obter_cnpj()
+            nsu = 0
+            paginas = 0
+            while paginas < 50:
+                adn_url = f"{EndpointsNfse.ADN_BASE_URL}/contribuintes/DFe/{nsu:020d}?cnpjConsulta={cnpj}"
+                try:
+                    resp = self._requisicao_adn("GET", adn_url)
+                except Exception as ex:
+                    import requests
+
+                    has_resp = isinstance(ex, requests.exceptions.HTTPError) and ex.response is not None
+                    if has_resp and ex.response.status_code == 404:
+                        logger.info("Fim da lista de documentos (ADN retornou 404).")
+                        break
+                    raise ex
+                lote = resp.json().get("LoteDFe", [])
+                if not lote:
+                    break
+
+                for doc in lote:
+                    if doc.get("ChaveAcesso") == chave:
+                        import base64
+                        import gzip
+
+                        xml_bytes = gzip.decompress(base64.b64decode(doc["ArquivoXml"]))
+                        return self.salvar_xml_adn(xml_bytes, chave, status, data_emissao)
+
+                max_nsu = max(doc["NSU"] for doc in lote)
+                nsu = max_nsu + 1
+                paginas += 1
+
+            logger.warning(f"Chave {chave} não encontrada no ADN.")
+
+        return self._baixar_arquivo(url, "xml", status, data_emissao)
+
+    def baixar_pdf(self, url: str, status: str, data_emissao: Any = None) -> str:
+        """Baixa o PDF de uma nota e salva no disco usando a estrutura configurada."""
+        if self.usa_apenas_credenciais():
+            res = self.baixar_via_impressao_html(url, status, data_emissao)
+            pdf_path = res.get("pdf_path") or res.get("html_path", "")
+            if pdf_path:
+                return pdf_path
+
+        chave = url.split("/")[-1]
+        caminho_completo = self._montar_caminho_destino(chave, "pdf", status, data_emissao)
 
         # Se tiver certificado, tenta ADN
         if self.caminho_pfx and self.senha_pfx:
@@ -929,24 +807,27 @@ class ClienteNfseNacional:
 
         # Se falhou ou retornou HTML (ex: captcha) e temos o XML, gera offline!
         if not resultado_download or resultado_download.lower().endswith(".html"):
-            # Calcula caminho do XML correspondente
-            xml_tags = dict(tags)
-            xml_tags["{EXT}"] = "xmls"
-            xml_rel = estrutura
-            for tag, val in xml_tags.items():
-                xml_rel = xml_rel.replace(tag, val)
+            caminho_xml = self._montar_caminho_destino(chave, "xml", status, data_emissao)
+            if (
+                not caminho_xml.exists()
+                and resultado_download
+                and resultado_download.lower().endswith(".html")
+                and Path(resultado_download).exists()
+            ):
+                try:
+                    from pynfse.html_to_xml import converter_arquivo_html_para_xml
 
-            caminho_xml_dir = Path(self.save_path)
-            for part in [p for p in xml_rel.replace("\\", "/").split("/") if p.strip()]:
-                caminho_xml_dir = caminho_xml_dir / part
+                    converter_arquivo_html_para_xml(resultado_download, caminho_xml)
+                except Exception as conv_err:
+                    logger.warning(f"Falha ao converter HTML para XML local: {conv_err}")
 
-            caminho_xml = caminho_xml_dir / f"{chave}.xml"
             if caminho_xml.exists():
                 logger.info(
                     f"Download do PDF oficial falhou ou foi bloqueado. "
                     f"Gerando PDF offline a partir do XML local: {caminho_xml}"
                 )
                 from pynfse.danfse_generator import DanfseGenerator
+
                 try:
                     generator = DanfseGenerator(str(caminho_xml), status=status)
                     generator.gerar_pdf(str(caminho_completo))

@@ -19,9 +19,7 @@ def test_helpers_e_parsing_basico():
     assert xml_parser._parse_float("abc") == 0.0
     assert xml_parser._parse_float(123) == 0.0
     assert xml_parser._parse_datetime(None) is None
-    assert xml_parser._parse_datetime("2025-09-01T16:24:00-03:00") == datetime(
-        2025, 9, 1, 16, 24, 0
-    )
+    assert xml_parser._parse_datetime("2025-09-01T16:24:00-03:00") == datetime(2025, 9, 1, 16, 24, 0)
     assert xml_parser._parse_datetime("2025-09-01") == datetime(2025, 9, 1)
     assert xml_parser._parse_datetime("invalido") is None
 
@@ -121,4 +119,3 @@ def test_extrair_dados_nfse_retorna_vazio_em_erros(tmp_path):
 
     assert xml_parser.extrair_dados_nfse(str(xml_invalido)) == {}
     assert xml_parser.extrair_dados_nfse(str(tmp_path / "nao_existe.xml")) == {}
-

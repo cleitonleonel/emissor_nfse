@@ -20,8 +20,6 @@ from cryptography.hazmat.primitives.serialization import Encoding, NoEncryption,
 from cryptography.x509.oid import NameOID
 from lxml import etree
 
-NS_DSIG = "http://www.w3.org/2000/09/xmldsig#"
-
 
 class DpsSigner:
     """Assinador XML-DSig Enveloped para documentos da NFS-e Nacional."""

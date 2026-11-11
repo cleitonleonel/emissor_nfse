@@ -17,16 +17,49 @@ Cliente síncrono para autenticação no portal, consulta e download de notas fi
 - `listar_notas_emitidas(data_inicio: Optional[str] = None, data_fim: Optional[str] = None, usar_adn: bool = True) -> Dict[str, Any]` — lista notas emitidas no período (`DD/MM/AAAA`). Quando o certificado está configurado e `usar_adn=True`, consulta o lote DFe na API do ADN.
 - `listar_notas_recebidas(data_inicio: Optional[str] = None, data_fim: Optional[str] = None, usar_adn: bool = True) -> Dict[str, Any]` — lista notas recebidas no período.
 - `baixar_xml(url: str, status: str, data_emissao: Any = None) -> str` — baixa e salva o XML da nota na estrutura configurada (via ADN quando há certificado A1 ou via portal).
-- `baixar_pdf(url: str, status: str, data_emissao: Any = None) -> str` — baixa o PDF da DANFS-e (via ADN ou portal). Caso o portal bloqueie por Captcha/403, gera o PDF offline via `DanfseGenerator` se o XML local existir, ou salva o HTML de impressão como fallback.
+- `baixar_pdf(url: str, status: str, data_emissao: Any = None) -> str` — baixa o PDF da DANFS-e (via ADN ou portal). Caso o portal bloqueie por Captcha/403 ou retorne HTML de impressão, o cliente converte o HTML para XML padrão SPED via `html_to_xml` e sintetiza o PDF oficial offline através de `DanfseGenerator`.
 - `obter_impressao_html(chave: str) -> Optional[str]` — recupera o HTML da página de impressão a partir da chave de acesso.
 - `salvar_xml_adn(xml_bytes: bytes, chave: str, status: str = "gerada", data_emissao: Any = None) -> str` — normaliza e salva um XML proveniente do ADN.
+- `usa_apenas_credenciais() -> bool` — indica se o cliente está operando exclusivamente via usuário/senha sem certificado digital ativo.
+
+### `pynfse.html_to_xml` (Reconstrução XML a partir de HTML)
+
+Reconstrutor de XML padrão SPED (`http://www.sped.fazenda.gov.br/nfse`) a partir do HTML de visualização de impressão (`Visualizar/Impressao`) do portal nacional. Permite recuperar os dados estruturados de NFS-e mesmo quando os downloads de XML/PDF oficiais estão bloqueados por Captcha.
+
+- `converter_html_para_xml(html_content: str) -> str` — recebe a string com o código HTML da impressão da nota e retorna uma string formatada contendo o XML padrão SPED oficial (`<NFSe><infNFSe>...<DPS><infDPS>...`).
+- `converter_arquivo_html_para_xml(caminho_html: Union[str, Path], caminho_xml_destino: Optional[Union[str, Path]] = None) -> str` — lê um arquivo `.html` de impressão e salva o `.xml` reconstruído no caminho especificado (ou ao lado do arquivo original). Retorna o caminho do arquivo gerado.
 
 ### `pynfse.danfse_generator.DanfseGenerator`
 
 Gerador offline de DANFS-e em PDF utilizando `fpdf2` e `qrcode`.
 
-- `DanfseGenerator(xml_path: str, logo_path: Optional[str] = None, status: Optional[str] = None)` — carrega o XML da NFS-e, identifica o município emitente e prepara o brasão/logotipo.
+- `DanfseGenerator(xml_path: str, logo_path: Optional[str] = None, status: Optional[str] = None)` — carrega o XML da NFS-e (aceita tanto o **caminho de um arquivo** quanto a **string direta com o XML**), identifica o município emitente e prepara o brasão/logotipo. Extrai resiliente os campos de competência (`dCompet`), base de cálculo (`vBC`), alíquota (`pAliqAplic`) e ISSQN (`vISSQN`).
 - `gerar_pdf(output_path: str) -> str` — renderiza o PDF completo da DANFS-e (cabeçalho com QR Code, emitente, tomador, serviço, tributação municipal/federal, totais IBS/CBS da Reforma Tributária e marca d'água para notas canceladas/substituídas).
+
+### `pynfse.constants` (Constantes e Mapeamentos)
+
+Centraliza namespaces XML oficiais, códigos IBGE e tabelas de domínio tributário nacional:
+- `NS_NFSE` (`http://www.sped.fazenda.gov.br/nfse`) e `NS_DSIG` (`http://www.w3.org/2000/09/xmldsig#`).
+- `NS`: dicionário de namespaces para buscas XPath (`{"pynfse": NS_NFSE}`).
+- `UF_ESTADOS`: mapeamento de siglas para nomes completos de todos os estados do Brasil.
+- `MUNICIPIOS_IBGE`: códigos IBGE de 7 dígitos para tupla `(Nome Município, UF)`.
+- `MUNICIPIOS_NOME_PARA_IBGE`: busca resiliente (com e sem acento) de `(Nome, UF)` para código IBGE.
+- `OPCAO_SIMPLES_NACIONAL_MAP`, `REGIME_APURACAO_SN_MAP`, `TRIBUTACAO_ISSQN_MAP`, `TIPO_RETENCAO_ISSQN_MAP`: descrições e códigos do portal emissor.
+
+### `pynfse.utils` (Funções Utilitárias e Formatadores)
+
+Módulo central de funções utilitárias compartilhadas:
+- `clean_digits(val: Any) -> str` — extrai apenas os dígitos numéricos de qualquer valor.
+- `parse_datetime(val: Any) -> Optional[datetime]` — normaliza e converte formatos variados de datas (ISO 8601, pt-BR `DD/MM/AAAA [às] HH:MM:SS`, SQL) para `datetime`.
+- `format_date(val: Any, include_time: bool = False) -> str` — formata data para o padrão brasileiro (`DD/MM/AAAA` ou `DD/MM/AAAA HH:MM:SS`).
+- `format_currency(val: Any) -> str` / `parse_currency(val: Optional[str]) -> float` — converte e formata valores monetários brasileiros (`R$ 1.500,00` <-> `1500.00`).
+- `format_percent(val: Any) -> str` — formata percentuais (`5,00%`).
+- `format_cnpj_cpf(val: str) -> str` — formata dinamicamente CNPJ (14 dígitos) ou CPF (11 dígitos) com pontuação.
+- `format_cep(val: str) -> str` — formata CEP (`XXXXX-XXX`).
+- `format_phone(val: str) -> str` — formata telefones com DDD brasileiro.
+- `extrair_codigo_inicial(val: Optional[str], default: str = "") -> str` — extrai o código numérico inicial de opções textuais (ex: `"1 - Operação Tributável"` -> `"1"`).
+- `find_xml_text(root, xpath, default=None)` / `find_xml_float(root, xpath, default=0.0)` — busca elementos em árvores XML utilizando o namespace SPED padrão.
+- `append_documento_xml(parent, documento)` — insere a tag filha `<CNPJ>` ou `<CPF>` no nó XML de acordo com o tamanho do documento.
 
 ### `pynfse.xml_parser.extrair_dados_nfse`
 
@@ -46,7 +79,7 @@ Gerador offline de DANFS-e em PDF utilizando `fpdf2` e `qrcode`.
 
 ### `pynfse.adn.adn_client.AdnNfseClient`
 
-Cliente assíncrono (`httpx` + mTLS) para comunicação com a Sefin Nacional e o ADN nos ambientes de `homologacao` (Produção Restrita) e `producao`.
+Cliente assíncrono (`httpx2` + mTLS) para comunicação com a Sefin Nacional e o ADN nos ambientes de `homologacao` (Produção Restrita) e `producao`.
 
 - `emitir_dps(xml_assinado: str, enviar_gzip_json: bool = True) -> Dict[str, Any]` — envia a DPS assinada (`POST /nfse`) e descompacta automaticamente o XML da NFS-e autorizada (`nfseXmlGZipB64`).
 - `enviar_evento(xml_assinado: str, chave_nfse: Optional[str] = None, enviar_gzip_json: bool = True) -> Dict[str, Any]` — registra eventos de cancelamento (`e101101`) ou substituição (`e105102`).

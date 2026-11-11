@@ -6,7 +6,6 @@ Opera diretamente sobre os schemas Pydantic v2 (`DPS`, `Prestador`, `Tomador`, `
 
 from __future__ import annotations
 
-import re
 from typing import Any, Dict, Optional
 
 from lxml import etree
@@ -19,13 +18,8 @@ from pynfse.adn.schemas import (
     Substituicao,
     Tomador,
 )
-
-NS_NFSE = "http://www.sped.fazenda.gov.br/nfse"
-
-
-def clean_digits(val: Any) -> str:
-    """Retorna apenas os dígitos numéricos de uma string."""
-    return re.sub(r"\D", "", str(val or ""))
+from pynfse.constants import NS_NFSE
+from pynfse.utils import clean_digits
 
 
 def _sub(parent: etree._Element, tag: str, text: Optional[Any] = None) -> etree._Element:
@@ -311,14 +305,9 @@ def build_dps_xml_from_schema(dps: DPS) -> str:
             for ref_key in refs:
                 _sub(g_ref_el, "refNFSe", clean_digits(ref_key))
 
-        if (
-            servico.tpEnteGov is not None
-            or (reforma.get("compras_governamentais") or {}).get("tpEnteGov") is not None
-        ):
+        if servico.tpEnteGov is not None or (reforma.get("compras_governamentais") or {}).get("tpEnteGov") is not None:
             tp_gov = (
-                servico.tpEnteGov
-                if servico.tpEnteGov is not None
-                else reforma["compras_governamentais"]["tpEnteGov"]
+                servico.tpEnteGov if servico.tpEnteGov is not None else reforma["compras_governamentais"]["tpEnteGov"]
             )
             _sub(ibscbs_el, "tpEnteGov", str(tp_gov))
 
@@ -386,11 +375,7 @@ def build_dps_xml(
 
     dps_schema = DPS(
         prestador=prestador if isinstance(prestador, Prestador) else Prestador.model_validate(prestador),
-        tomador=(
-            tomador
-            if isinstance(tomador, Tomador) or tomador is None
-            else Tomador.model_validate(tomador)
-        ),
+        tomador=(tomador if isinstance(tomador, Tomador) or tomador is None else Tomador.model_validate(tomador)),
         servico=servico if isinstance(servico, Servico) else Servico.model_validate(servico),
         intermediario=(
             intermediario
@@ -407,7 +392,9 @@ def build_dps_xml(
         numero=numero_dps,
         competencia=data_competencia,
         data_emissao=data_emissao,
-        ambiente=ambiente or (prestador.ambiente if isinstance(prestador, Prestador) else prestador.get("ambiente")) or "homologacao",
+        ambiente=ambiente
+        or (prestador.ambiente if isinstance(prestador, Prestador) else prestador.get("ambiente"))
+        or "homologacao",
         incluir_ibscbs=incluir_ibscbs,
         versao_aplicativo=versao_aplicativo,
     )

@@ -54,21 +54,20 @@ def build_svg(percent_text: str, color: str) -> str:
         '  <linearGradient id="s" x2="0" y2="100%">',
         '    <stop offset="0" stop-color="#bbb" stop-opacity=".1"/>',
         '    <stop offset="1" stop-opacity=".1"/>',
-        '  </linearGradient>',
+        "  </linearGradient>",
         '  <clipPath id="r">',
         f'    <rect width="{width}" height="20" rx="3" fill="#fff"/>',
-        '  </clipPath>',
+        "  </clipPath>",
         '  <g clip-path="url(#r)">',
         f'    <rect width="{label_width}" height="20" fill="#555"/>',
         f'    <rect x="{label_width}" width="{value_width}" height="20" fill="{color}"/>',
         f'    <rect width="{width}" height="20" fill="url(#s)"/>',
-        '  </g>',
-        '  <g fill="#fff" text-anchor="middle" '
-        'font-family="Verdana,Geneva,DejaVu Sans,sans-serif" font-size="11">',
+        "  </g>",
+        '  <g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" font-size="11">',
         '    <text x="35" y="14">{label}</text>'.format(label=label),
         '    <text x="97" y="14">{percent}</text>'.format(percent=percent_text),
-        '  </g>',
-        '</svg>',
+        "  </g>",
+        "</svg>",
     ]
     return "\n".join(svg_lines)
 
@@ -101,4 +100,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

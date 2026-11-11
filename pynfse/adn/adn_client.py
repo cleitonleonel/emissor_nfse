@@ -13,9 +13,12 @@ import base64
 import gzip
 import os
 import tempfile
-from typing import Any, Dict, Optional
+from contextlib import asynccontextmanager
+from typing import Any, AsyncIterator, Dict, Optional
 
 import httpx2 as httpx
+
+from pynfse.utils import clean_digits
 
 
 class AdnNfseClient:
@@ -107,24 +110,45 @@ class AdnNfseClient:
         self._temp_cert_file = None
         self._temp_key_file = None
 
-    async def consultar_parametros_municipais(self, cod_ibge: str) -> Dict[str, Any]:
-        """Consulta convênio e alíquotas do município na API de Parâmetros Municipais do ADN."""
-        c_mun = "".join(ch for ch in (cod_ibge or "") if ch.isdigit()).zfill(7)
-        url = f"{self.base_url}/parametros_municipais/{c_mun}/convenio"
+    @asynccontextmanager
+    async def _client_session(self) -> AsyncIterator[httpx.AsyncClient]:
+        """Gerenciador de contexto assíncrono para sessões HTTPX com mTLS temporário."""
         cert_files = self._setup_mtls()
         try:
             async with httpx.AsyncClient(cert=cert_files, timeout=self.timeout, verify=False) as client:
-                res = await client.get(url, headers={"Accept": "application/json"})
-                return {
-                    "sucesso": res.status_code == 200,
-                    "status_code": res.status_code,
-                    "municipio": c_mun,
-                    "dados": res.json() if "application/json" in res.headers.get("content-type", "") else res.text,
-                }
-        except Exception as exc:
-            return {"sucesso": False, "status_code": 500, "municipio": c_mun, "erro": str(exc)}
+                yield client
         finally:
             self._cleanup_mtls()
+
+    async def _get_json_ou_texto(
+        self,
+        url: str,
+        params: Optional[Dict[str, Any]] = None,
+        headers: Optional[Dict[str, str]] = None,
+    ) -> tuple[int, Any]:
+        """Executa requisição GET mTLS e retorna (status_code, json_ou_texto)."""
+        hdrs = {"Accept": "application/json, application/xml"}
+        if headers:
+            hdrs.update(headers)
+        async with self._client_session() as client:
+            res = await client.get(url, params=params, headers=hdrs)
+            is_json = "application/json" in res.headers.get("content-type", "")
+            return res.status_code, (res.json() if is_json else res.text)
+
+    async def consultar_parametros_municipais(self, cod_ibge: str) -> Dict[str, Any]:
+        """Consulta convênio e alíquotas do município na API de Parâmetros Municipais do ADN."""
+        c_mun = clean_digits(cod_ibge).zfill(7)
+        url = f"{self.base_url}/parametros_municipais/{c_mun}/convenio"
+        try:
+            status_code, dados = await self._get_json_ou_texto(url, headers={"Accept": "application/json"})
+            return {
+                "sucesso": status_code == 200,
+                "status_code": status_code,
+                "municipio": c_mun,
+                "dados": dados,
+            }
+        except Exception as exc:
+            return {"sucesso": False, "status_code": 500, "municipio": c_mun, "erro": str(exc)}
 
     async def emitir_dps(self, dps_ou_xml: Any, enviar_gzip_json: bool = True) -> Dict[str, Any]:
         """Submete a DPS (instância do schema `DPS` ou XML assinado) à Sefin Nacional / ADN."""
@@ -133,19 +157,16 @@ class AdnNfseClient:
         if isinstance(dps_ou_xml, DPS):
             xml_gerado = dps_ou_xml.to_xml()
             xml_assinado = (
-                self._signer.sign_xml(xml_gerado, tag_to_sign="infDPS")
-                if self._signer is not None
-                else xml_gerado
+                self._signer.sign_xml(xml_gerado, tag_to_sign="infDPS") if self._signer is not None else xml_gerado
             )
         else:
             xml_assinado = str(dps_ou_xml)
 
         url = f"{self.base_url}/nfse"
-        cert_files = self._setup_mtls()
         dps_b64 = self.compactar_xml_gzip_b64(xml_assinado)
 
         try:
-            async with httpx.AsyncClient(cert=cert_files, timeout=self.timeout, verify=False) as client:
+            async with self._client_session() as client:
                 if enviar_gzip_json:
                     res = await client.post(
                         url,
@@ -198,8 +219,6 @@ class AdnNfseClient:
                 "mensagem": "Erro de conexão mTLS com a Sefin Nacional / ADN.",
                 "erro": str(exc),
             }
-        finally:
-            self._cleanup_mtls()
 
     async def enviar_evento(
         self,
@@ -208,15 +227,14 @@ class AdnNfseClient:
         enviar_gzip_json: bool = True,
     ) -> Dict[str, Any]:
         """Envia pedido de registro de evento (cancelamento e101101 ou substituição e105102) ao ADN/Sefin Nacional."""
-        chave_limpa = "".join(ch for ch in (chave_nfse or "") if ch.isdigit())
+        chave_limpa = clean_digits(chave_nfse)
         url = (
             f"{self.base_url}/nfse/{chave_limpa}/eventos" if len(chave_limpa) == 50 else f"{self.base_url}/pedRegEvento"
         )
-        cert_files = self._setup_mtls()
         evt_b64 = self.compactar_xml_gzip_b64(xml_assinado)
 
         try:
-            async with httpx.AsyncClient(cert=cert_files, timeout=self.timeout, verify=False) as client:
+            async with self._client_session() as client:
                 if enviar_gzip_json:
                     res = await client.post(
                         url,
@@ -250,85 +268,67 @@ class AdnNfseClient:
                 "evento_xml_gzip_b64": evt_b64,
                 "erro": str(exc),
             }
-        finally:
-            self._cleanup_mtls()
 
     async def consultar_nfse(self, chave_acesso: str) -> Dict[str, Any]:
         """Consulta NFS-e pela chave de 50 dígitos no ADN/Sefin Nacional."""
-        chave_limpa = "".join(ch for ch in (chave_acesso or "") if ch.isdigit())
+        chave_limpa = clean_digits(chave_acesso)
         url = f"{self.base_url}/nfse/{chave_limpa}"
-        cert_files = self._setup_mtls()
         try:
-            async with httpx.AsyncClient(cert=cert_files, timeout=self.timeout, verify=False) as client:
-                res = await client.get(url, headers={"Accept": "application/json, application/xml"})
-                is_json = "application/json" in res.headers.get("content-type", "")
-                return {
-                    "sucesso": res.status_code == 200,
-                    "status_code": res.status_code,
-                    "conteudo": res.json() if is_json else res.text,
-                }
+            status_code, conteudo = await self._get_json_ou_texto(url)
+            return {
+                "sucesso": status_code == 200,
+                "status_code": status_code,
+                "conteudo": conteudo,
+            }
         except Exception as exc:
             return {"sucesso": False, "status_code": 500, "erro": str(exc)}
-        finally:
-            self._cleanup_mtls()
 
     async def consultar_dps(self, id_dps: str) -> Dict[str, Any]:
         """Consulta DPS pelo seu identificador (45 caracteres) na Sefin Nacional."""
         id_limpo = (id_dps or "").strip()
         url = f"{self.base_url}/dps/{id_limpo}"
-        cert_files = self._setup_mtls()
         try:
-            async with httpx.AsyncClient(cert=cert_files, timeout=self.timeout, verify=False) as client:
-                res = await client.get(url, headers={"Accept": "application/json, application/xml"})
-                is_json = "application/json" in res.headers.get("content-type", "")
-                return {
-                    "sucesso": res.status_code == 200,
-                    "status_code": res.status_code,
-                    "id_dps": id_limpo,
-                    "conteudo": res.json() if is_json else res.text,
-                }
+            status_code, conteudo = await self._get_json_ou_texto(url)
+            return {
+                "sucesso": status_code == 200,
+                "status_code": status_code,
+                "id_dps": id_limpo,
+                "conteudo": conteudo,
+            }
         except Exception as exc:
             return {"sucesso": False, "status_code": 500, "id_dps": id_limpo, "erro": str(exc)}
-        finally:
-            self._cleanup_mtls()
 
     async def consultar_eventos(self, chave_acesso: str) -> Dict[str, Any]:
         """Consulta os eventos vinculados a uma NFS-e pela chave de 50 dígitos."""
-        chave_limpa = "".join(ch for ch in (chave_acesso or "") if ch.isdigit())
+        chave_limpa = clean_digits(chave_acesso)
         url = f"{self.base_url}/nfse/{chave_limpa}/eventos"
-        cert_files = self._setup_mtls()
         try:
-            async with httpx.AsyncClient(cert=cert_files, timeout=self.timeout, verify=False) as client:
-                res = await client.get(url, headers={"Accept": "application/json, application/xml"})
-                is_json = "application/json" in res.headers.get("content-type", "")
-                return {
-                    "sucesso": res.status_code == 200,
-                    "status_code": res.status_code,
-                    "chave_acesso": chave_limpa,
-                    "eventos": res.json() if is_json else res.text,
-                }
+            status_code, eventos = await self._get_json_ou_texto(url)
+            return {
+                "sucesso": status_code == 200,
+                "status_code": status_code,
+                "chave_acesso": chave_limpa,
+                "eventos": eventos,
+            }
         except Exception as exc:
             return {"sucesso": False, "status_code": 500, "chave_acesso": chave_limpa, "erro": str(exc)}
-        finally:
-            self._cleanup_mtls()
 
     async def listar_dfe_adn(self, cnpj: str, ultimo_nsu: int = 0) -> Dict[str, Any]:
         """Consulta a distribuição de DF-e por NSU no ADN (/contribuintes/DFe/{nsu}?cnpj=...)."""
-        cnpj_limpo = "".join(ch for ch in (cnpj or "") if ch.isdigit())
+        cnpj_limpo = clean_digits(cnpj)
         nsu_str = str(max(0, int(ultimo_nsu))).zfill(20)
         url = f"{self.adn_url}/contribuintes/DFe/{nsu_str}"
-        cert_files = self._setup_mtls()
         try:
-            async with httpx.AsyncClient(cert=cert_files, timeout=self.timeout, verify=False) as client:
-                res = await client.get(url, params={"cnpj": cnpj_limpo}, headers={"Accept": "application/json"})
-                is_json = "application/json" in res.headers.get("content-type", "")
-                return {
-                    "sucesso": res.status_code == 200,
-                    "status_code": res.status_code,
-                    "cnpj": cnpj_limpo,
-                    "nsu_consultado": nsu_str,
-                    "dados": res.json() if is_json else res.text,
-                }
+            status_code, dados = await self._get_json_ou_texto(
+                url, params={"cnpj": cnpj_limpo}, headers={"Accept": "application/json"}
+            )
+            return {
+                "sucesso": status_code == 200,
+                "status_code": status_code,
+                "cnpj": cnpj_limpo,
+                "nsu_consultado": nsu_str,
+                "dados": dados,
+            }
         except Exception as exc:
             return {
                 "sucesso": False,
@@ -337,16 +337,13 @@ class AdnNfseClient:
                 "nsu_consultado": nsu_str,
                 "erro": str(exc),
             }
-        finally:
-            self._cleanup_mtls()
 
     async def baixar_danfse(self, chave_acesso: str) -> Dict[str, Any]:
         """Baixa o PDF do DANFSe diretamente da API do ADN (/danfse/{chave})."""
-        chave_limpa = "".join(ch for ch in (chave_acesso or "") if ch.isdigit())
+        chave_limpa = clean_digits(chave_acesso)
         url = f"{self.adn_url}/danfse/{chave_limpa}"
-        cert_files = self._setup_mtls()
         try:
-            async with httpx.AsyncClient(cert=cert_files, timeout=self.timeout, verify=False) as client:
+            async with self._client_session() as client:
                 res = await client.get(url, headers={"Accept": "application/pdf, application/json"})
                 is_pdf = res.status_code == 200 and (
                     "application/pdf" in res.headers.get("content-type", "").lower() or res.content.startswith(b"%PDF")
@@ -367,5 +364,3 @@ class AdnNfseClient:
                 "pdf_bytes": None,
                 "erro": str(exc),
             }
-        finally:
-            self._cleanup_mtls()

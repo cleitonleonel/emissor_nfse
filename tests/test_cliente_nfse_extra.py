@@ -435,4 +435,3 @@ def test_baixar_arquivo_retorna_vazio_em_erro(monkeypatch):
 
     monkeypatch.setattr(cliente.http, "enviar_requisicao", explode)
     assert cliente.baixar_xml("https://exemplo/nota", "") == ""
-

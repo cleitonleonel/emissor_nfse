@@ -7,16 +7,13 @@ para dicionários), mantendo aceitação automática de `dict` via `model_valida
 
 from __future__ import annotations
 
-import re
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Any, Dict, List, Optional
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator, model_validator
 
-
-def _clean_digits(val: Any) -> str:
-    return re.sub(r"\D", "", str(val or ""))
+from pynfse.utils import clean_digits as _clean_digits
 
 
 class Endereco(BaseModel):

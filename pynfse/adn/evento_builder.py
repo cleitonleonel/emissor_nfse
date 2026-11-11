@@ -9,17 +9,13 @@ Suporta:
 
 from __future__ import annotations
 
-import re
 from datetime import datetime
 from typing import Optional
 
 from lxml import etree
 
-NS_NFSE = "http://www.sped.fazenda.gov.br/nfse"
-
-
-def _clean_digits(val: str | int | None) -> str:
-    return re.sub(r"\D", "", str(val or ""))
+from pynfse.constants import NS_NFSE
+from pynfse.utils import clean_digits as _clean_digits
 
 
 def _sub(parent: etree._Element, tag: str, text: Optional[str] = None) -> etree._Element:

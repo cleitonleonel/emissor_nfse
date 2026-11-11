@@ -49,4 +49,3 @@ def test_enviar_requisicao_loga_erro_e_relanca(monkeypatch, caplog):
             cliente.enviar_requisicao("POST", "https://example.com/login")
 
     assert "Erro na requisição POST https://example.com/login" in caplog.text
-

@@ -4,23 +4,21 @@ Utiliza apenas a stdlib (xml.etree.ElementTree) — sem dependências extras.
 
 Namespace oficial: http://www.sped.fazenda.gov.br/nfse
 """
+
 import logging
 import xml.etree.ElementTree as ET
 from datetime import datetime
 from typing import Optional, cast
 
-logger = logging.getLogger(__name__)
+from pynfse.constants import NS
+from pynfse.utils import find_xml_text, parse_datetime
 
-# Namespace padrão da NFS-e Nacional
-NS = {"pynfse": "http://www.sped.fazenda.gov.br/nfse"}
+logger = logging.getLogger(__name__)
 
 
 def _find_text(root: Optional[ET.Element], xpath: str) -> Optional[str]:
     """Busca um elemento pelo XPath com namespace e retorna seu texto, ou None."""
-    if root is None:
-        return None
-    el = root.find(xpath, NS)
-    return el.text.strip() if el is not None and el.text else None
+    return find_xml_text(root, xpath)
 
 
 def _parse_float(value: Optional[str]) -> float:
@@ -34,22 +32,8 @@ def _parse_float(value: Optional[str]) -> float:
 
 
 def _parse_datetime(value: Optional[str]) -> Optional[datetime]:
-    """
-    Converte string ISO 8601 (com ou sem offset) para datetime.
-    Exemplos: '2025-09-01T16:24:00-03:00', '2025-09-01T19:24:00Z'
-    """
-    if not value:
-        return None
-    # Remove o offset de timezone para simplificar a normalização do timestamp.
-    try:
-        # Tenta formato com offset: 2025-09-01T16:24:00-03:00
-        clean = value[:19]  # pega só 'YYYY-MM-DDTHH:MM:SS'
-        return datetime.strptime(clean, "%Y-%m-%dT%H:%M:%S")
-    except ValueError:
-        try:
-            return datetime.strptime(value[:10], "%Y-%m-%d")
-        except ValueError:
-            return None
+    """Converte string ISO 8601 (com ou sem offset) para datetime."""
+    return parse_datetime(value)
 
 
 def extrair_dados_nfse(xml_path: str) -> dict:
@@ -115,9 +99,7 @@ def extrair_dados_nfse(xml_path: str) -> dict:
     descricao = None
 
     if dps_node is not None:
-        valor_serv = _parse_float(
-            _find_text(dps_node, "pynfse:valores/pynfse:vServPrest/pynfse:vServ")
-        )
+        valor_serv = _parse_float(_find_text(dps_node, "pynfse:valores/pynfse:vServPrest/pynfse:vServ"))
         # Tomador
         toma = dps_node.find("pynfse:toma", NS)
         if toma is not None:

@@ -203,7 +203,7 @@ def test_listar_notas_emitidas_parseia_links(tmp_path, monkeypatch):
             "status_danfs-e": "unknown",
             "valor": "0,00",
             "data_emissao": "",
-            "numero": ""
+            "numero": "",
         }
     ]
 

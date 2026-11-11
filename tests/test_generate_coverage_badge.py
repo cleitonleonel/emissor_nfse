@@ -1,4 +1,3 @@
-
 from scripts.generate_coverage_badge import (
     build_svg,
     coverage_color,
@@ -43,5 +42,4 @@ def test_build_svg_contains_expected_labels():
     svg = build_svg("100%", "#4c1")
     assert "coverage: 100%" in svg
     assert "#4c1" in svg
-    assert "width=\"124\"" in svg
-
+    assert 'width="124"' in svg

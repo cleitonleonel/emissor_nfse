@@ -2,6 +2,7 @@ from pynfse.danfse_generator import DanfseGenerator
 
 NS = "http://www.sped.fazenda.gov.br/nfse"
 
+
 def test_gerar_danfse_completa(tmp_path):
     xml_content = f"""<?xml version="1.0" encoding="utf-8"?>
 <CompNfse xmlns="{NS}">
@@ -111,21 +112,21 @@ def test_gerar_danfse_completa(tmp_path):
 """
     xml_path = tmp_path / "nfse_teste.xml"
     xml_path.write_text(xml_content, encoding="utf-8")
-    
+
     pdf_path = tmp_path / "danfse_teste.pdf"
-    
+
     # 1. Instanciar o gerador com a nota normal
     generator = DanfseGenerator(str(xml_path), status="NORMAL")
     generator.gerar_pdf(str(pdf_path))
-    
+
     assert pdf_path.exists()
     assert pdf_path.stat().st_size > 0
-    
+
     # 2. Instanciar o gerador com a nota cancelada
     pdf_cancelada_path = tmp_path / "danfse_cancelada.pdf"
     generator_cancelada = DanfseGenerator(str(xml_path), status="CANCELADA")
     generator_cancelada.gerar_pdf(str(pdf_cancelada_path))
-    
+
     assert pdf_cancelada_path.exists()
     assert pdf_cancelada_path.stat().st_size > 0
 

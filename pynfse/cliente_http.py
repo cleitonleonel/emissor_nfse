@@ -40,7 +40,7 @@ class ClienteHttp:
             total=3,
             backoff_factor=1,
             status_forcelist=[429, 500, 502, 503, 504, 104],
-            allowed_methods=["HEAD", "POST", "PUT", "GET", "OPTIONS"]
+            allowed_methods=["HEAD", "POST", "PUT", "GET", "OPTIONS"],
         )
         adaptador = HTTPAdapter(max_retries=estrategia_retry)
         self.sessao.mount("https://", adaptador)

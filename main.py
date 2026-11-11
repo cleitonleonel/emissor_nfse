@@ -11,7 +11,7 @@ from pynfse.cliente_nfse import ClienteNfseNacional
 load_dotenv()
 
 # Opcional: Configura um logger básico para o main
-logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
 
 def main():
@@ -29,7 +29,7 @@ def main():
         usuario=username,  # Apenas números, sem pontos ou traços
         senha=password,
         caminho_pfx=cert_path,
-        senha_pfx=cert_senha
+        senha_pfx=cert_senha,
     )
 
     try:

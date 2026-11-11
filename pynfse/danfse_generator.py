@@ -11,37 +11,17 @@ from typing import Any, Dict, Optional
 import qrcode
 from fpdf import FPDF
 
-NS = {"pynfse": "http://www.sped.fazenda.gov.br/nfse"}
-
-UF_ESTADOS = {
-    "AC": "Acre",
-    "AL": "Alagoas",
-    "AP": "Amapá",
-    "AM": "Amazonas",
-    "BA": "Bahia",
-    "CE": "Ceará",
-    "DF": "Distrito Federal",
-    "ES": "Espírito Santo",
-    "GO": "Goiás",
-    "MA": "Maranhão",
-    "MT": "Mato Grosso",
-    "MS": "Mato Grosso do Sul",
-    "MG": "Minas Gerais",
-    "PA": "Pará",
-    "PB": "Paraíba",
-    "PR": "Paraná",
-    "PE": "Pernambuco",
-    "PI": "Piauí",
-    "RJ": "Rio de Janeiro",
-    "RN": "Rio Grande do Norte",
-    "RS": "Rio Grande do Sul",
-    "RO": "Rondônia",
-    "RR": "Roraima",
-    "SC": "Santa Catarina",
-    "SP": "São Paulo",
-    "SE": "Sergipe",
-    "TO": "Tocantins",
-}
+from pynfse.constants import MUNICIPIOS_IBGE, NS, UF_ESTADOS
+from pynfse.utils import (
+    find_xml_float,
+    find_xml_text,
+    format_cep,
+    format_cnpj_cpf,
+    format_currency,
+    format_date,
+    format_percent,
+    format_phone,
+)
 
 
 def _obter_ou_baixar_logo_prefeitura(mun_nome: str, uf: str) -> Optional[Path]:
@@ -104,11 +84,7 @@ def _obter_ou_baixar_logo_prefeitura(mun_nome: str, uf: str) -> Optional[Path]:
                     if not img and images:
                         for img_el in images:
                             alt_l = img_el.get("alt", "").lower()
-                            if (
-                                "bandeira" not in alt_l
-                                and "localização" not in alt_l
-                                and "mapa" not in alt_l
-                            ):
+                            if "bandeira" not in alt_l and "localização" not in alt_l and "mapa" not in alt_l:
                                 img = img_el
                                 break
                         if not img:
@@ -132,14 +108,7 @@ def _obter_ou_baixar_logo_prefeitura(mun_nome: str, uf: str) -> Optional[Path]:
                         if img_url.lower().endswith(".svg") and "/commons/" in img_url:
                             parts = img_url.split("/commons/")
                             filename = parts[1].split("/")[-1]
-                            img_url = (
-                                parts[0]
-                                + "/commons/thumb/"
-                                + parts[1]
-                                + "/500px-"
-                                + filename
-                                + ".png"
-                            )
+                            img_url = parts[0] + "/commons/thumb/" + parts[1] + "/500px-" + filename + ".png"
                             ext = ".png"
                         else:
                             ext = ".png" if img_url.lower().endswith(".png") else ".jpg"
@@ -147,11 +116,7 @@ def _obter_ou_baixar_logo_prefeitura(mun_nome: str, uf: str) -> Optional[Path]:
                         # Download do arquivo
                         req_img = urllib.request.Request(
                             img_url,
-                            headers={
-                                "User-Agent": (
-                                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) EmissorNFSe/1.0"
-                                )
-                            },
+                            headers={"User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) EmissorNFSe/1.0")},
                         )
                         with urllib.request.urlopen(req_img, timeout=5) as img_response:
                             content = img_response.read()
@@ -164,91 +129,14 @@ def _obter_ou_baixar_logo_prefeitura(mun_nome: str, uf: str) -> Optional[Path]:
     return None
 
 
-MUNICIPIOS_IBGE = {
-    "3201308": ("CARIACICA", "ES"),
-    "3550308": ("SÃO PAULO", "SP"),
-    "2112803": ("VIANA", "MA"),
-    "3205101": ("VIANA", "ES"),
-    "3205309": ("VILA VELHA", "ES"),
-    "3205002": ("SERRA", "ES"),
-    "3205200": ("VITÓRIA", "ES"),
-}
-
-
 def _find_text(root: Optional[ET.Element], xpath: str, default: str = "-") -> str:
-    if root is None:
-        return default
-    el = root.find(xpath, NS)
-    return el.text.strip() if el is not None and el.text else default
+    """Busca texto de elemento XML com namespace SPED."""
+    return find_xml_text(root, xpath, default=default) or default
 
 
 def _find_float(root: Optional[ET.Element], xpath: str) -> float:
-    txt = _find_text(root, xpath, "0")
-    try:
-        return float(txt.replace(",", ".").strip())
-    except ValueError:
-        return 0.0
-
-
-def format_cnpj_cpf(val: str) -> str:
-    val = "".join(filter(str.isdigit, val))
-    if len(val) == 14:
-        return f"{val[:2]}.{val[2:5]}.{val[5:8]}/{val[8:12]}-{val[12:]}"
-    elif len(val) == 11:
-        return f"{val[:3]}.{val[3:6]}.{val[6:9]}-{val[9:]}"
-    return val
-
-
-def format_cep(val: str) -> str:
-    val = "".join(filter(str.isdigit, val))
-    if len(val) == 8:
-        return f"{val[:5]}-{val[5:]}"
-    return val
-
-
-def format_phone(val: str) -> str:
-    if not val or val == "-":
-        return "-"
-    val = "".join(filter(str.isdigit, val))
-    if not val:
-        return "-"
-    if len(val) == 11:
-        return f"({val[:2]}) {val[2:7]}-{val[7:]}"
-    elif len(val) == 10:
-        return f"({val[:2]}) {val[2:6]}-{val[6:]}"
-    elif len(val) == 9:
-        return f"{val[:5]}-{val[5:]}"
-    elif len(val) == 8:
-        return f"{val[:4]}-{val[4:]}"
-    return val
-
-
-def format_date(val: str) -> str:
-    if not val or val == "-":
-        return "-"
-    # 2026-07-20T15:00:00-03:00 or 2026-07-20
-    try:
-        clean = val[:19]
-        if "T" in clean:
-            from datetime import datetime
-
-            dt = datetime.strptime(clean, "%Y-%m-%dT%H:%M:%S")
-            return dt.strftime("%d/%m/%Y %H:%M:%S")
-        else:
-            from datetime import datetime
-
-            dt = datetime.strptime(clean[:10], "%Y-%m-%d")
-            return dt.strftime("%d/%m/%Y")
-    except Exception:
-        return val
-
-
-def format_currency(val: float) -> str:
-    return f"R$ {val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-
-
-def format_percent(val: float) -> str:
-    return f"{val:,.2f}%".replace(",", "X").replace(".", ",").replace("X", ".")
+    """Busca valor float de elemento XML com namespace SPED."""
+    return find_xml_float(root, xpath, default=0.0)
 
 
 class DanfsePDF(FPDF):
@@ -308,9 +196,7 @@ class DanfsePDF(FPDF):
         self.set_xy(x + 1, y_val)
         self.cell(w - 2, 3.2, val_str, border=0, align=align)
 
-    def draw_multiline_field(
-        self, label: str, value: str, x: float, y: float, w: float, h: float, fill: bool = False
-    ):
+    def draw_multiline_field(self, label: str, value: str, x: float, y: float, w: float, h: float, fill: bool = False):
         """Desenha um campo com conteúdo multilinha (como descrição do serviço ou endereço)."""
         if fill:
             self.set_fill_color(242, 242, 242)
@@ -341,8 +227,12 @@ class DanfseGenerator:
 
     def _parse_xml(self):
         try:
-            tree = ET.parse(self.xml_path)
-            root = tree.getroot()
+            raw = (self.xml_path or "").lstrip()
+            if raw.startswith("<?xml") or raw.startswith("<NFSe") or raw.startswith("<CompNfse"):
+                root = ET.fromstring(raw)
+            else:
+                tree = ET.parse(self.xml_path)
+                root = tree.getroot()
         except Exception as e:
             raise ValueError(f"Falha ao carregar XML: {e}") from e
 
@@ -360,6 +250,8 @@ class DanfseGenerator:
         xLocEmi = _find_text(inf, "pynfse:xLocEmi", "").upper()
 
         dps = inf.find("pynfse:DPS/pynfse:infDPS", NS)
+        if dCompet == "-":
+            dCompet = _find_text(dps, "pynfse:dCompet")
         nDPS = _find_text(dps, "pynfse:nDPS")
         serie = _find_text(dps, "pynfse:serie")
         dhEmi = _find_text(dps, "pynfse:dhEmi")
@@ -504,9 +396,10 @@ class DanfseGenerator:
         tribISSQN = _find_text(trib_mun, "pynfse:tribISSQN")
         tpRetISSQN = _find_text(trib_mun, "pynfse:tpRetISSQN")
         is_retido = tpRetISSQN in ["1", "2"]
-        vBC = _find_float(valores, "pynfse:vBC")
-        pAliqAplic = _find_float(valores, "pynfse:pAliqAplic")
-        vISSQN = _find_float(valores, "pynfse:vISSQN")
+        inf_valores = inf.find("pynfse:valores", NS)
+        vBC = _find_float(valores, "pynfse:vBC") or _find_float(inf_valores, "pynfse:vBC")
+        pAliqAplic = _find_float(valores, "pynfse:pAliqAplic") or _find_float(inf_valores, "pynfse:pAliqAplic")
+        vISSQN = _find_float(valores, "pynfse:vISSQN") or _find_float(inf_valores, "pynfse:vISSQN")
 
         vRetIRRF = _find_float(valores, "pynfse:trib/pynfse:tribFed/pynfse:vRetIRRF")
         vRetCP = _find_float(valores, "pynfse:trib/pynfse:tribFed/pynfse:vRetCP")
@@ -514,23 +407,13 @@ class DanfseGenerator:
         vPis = _find_float(valores, "pynfse:trib/pynfse:tribFed/pynfse:piscofins/pynfse:vPis")
         vCofins = _find_float(valores, "pynfse:trib/pynfse:tribFed/pynfse:piscofins/pynfse:vCofins")
 
-        vIBSMun = _find_float(
-            inf, "pynfse:IBSCBS/pynfse:totCIBS/pynfse:gIBS/pynfse:gIBSMunTot/pynfse:vIBSMun"
-        )
-        vIBSUF = _find_float(
-            inf, "pynfse:IBSCBS/pynfse:totCIBS/pynfse:gIBS/pynfse:gIBSUFTot/pynfse:vIBSUF"
-        )
+        vIBSMun = _find_float(inf, "pynfse:IBSCBS/pynfse:totCIBS/pynfse:gIBS/pynfse:gIBSMunTot/pynfse:vIBSMun")
+        vIBSUF = _find_float(inf, "pynfse:IBSCBS/pynfse:totCIBS/pynfse:gIBS/pynfse:gIBSUFTot/pynfse:vIBSUF")
         vCBS = _find_float(inf, "pynfse:IBSCBS/pynfse:totCIBS/pynfse:gCBS/pynfse:vCBS")
 
-        vTotTribFed = _find_float(
-            valores, "pynfse:trib/pynfse:totTrib/pynfse:vTotTrib/pynfse:vTotTribFed"
-        )
-        vTotTribEst = _find_float(
-            valores, "pynfse:trib/pynfse:totTrib/pynfse:vTotTrib/pynfse:vTotTribEst"
-        )
-        vTotTribMun = _find_float(
-            valores, "pynfse:trib/pynfse:totTrib/pynfse:vTotTrib/pynfse:vTotTribMun"
-        )
+        vTotTribFed = _find_float(valores, "pynfse:trib/pynfse:totTrib/pynfse:vTotTrib/pynfse:vTotTribFed")
+        vTotTribEst = _find_float(valores, "pynfse:trib/pynfse:totTrib/pynfse:vTotTrib/pynfse:vTotTribEst")
+        vTotTribMun = _find_float(valores, "pynfse:trib/pynfse:totTrib/pynfse:vTotTrib/pynfse:vTotTribMun")
 
         vLiq = _find_float(inf, "pynfse:valores/pynfse:vLiq")
         xInfComp = _find_text(dps, "pynfse:serv/pynfse:infoCompl")
@@ -733,30 +616,20 @@ class DanfseGenerator:
         self.pdf.draw_field("SÉRIE DA DPS", self.dados["serie"], 53.9, 29.4, 50.9, 7.1)
         self.pdf.draw_field("DATA E HORA EMISSÃO DPS", self.dados["dhEmi"], 104.8, 29.4, 51.2, 7.1)
 
-        self.pdf.draw_field(
-            "EMITENTE DA NFS-E / Prestador do Serviço", "", 3, 36.5, 50.9, 6.3, fill=True
-        )
+        self.pdf.draw_field("EMITENTE DA NFS-E / Prestador do Serviço", "", 3, 36.5, 50.9, 6.3, fill=True)
         self.pdf.draw_field("CNPJ / CPF / NIF", self.dados["cnpj_prest"], 53.9, 36.5, 50.9, 6.3)
         self.pdf.draw_field("INSCRIÇÃO MUNICIPAL", self.dados["im_prest"], 104.8, 36.5, 50.9, 6.3)
         self.pdf.draw_field("TELEFONE", self.dados["fone_prest"], 155.7, 36.5, 51.3, 6.3)
 
-        self.pdf.draw_multiline_field(
-            "NOME / NOME EMPRESARIAL", self.dados["nome_prest"], 3, 42.8, 152.7, 6.5
-        )
+        self.pdf.draw_multiline_field("NOME / NOME EMPRESARIAL", self.dados["nome_prest"], 3, 42.8, 152.7, 6.5)
         self.pdf.draw_field("E-MAIL", self.dados["email_prest"], 155.7, 42.8, 51.3, 6.5)
 
         self.pdf.draw_multiline_field("ENDEREÇO", self.dados["end_prest_lgr"], 3, 49.3, 101.8, 6.5)
         self.pdf.draw_field("MUNICÍPIO / UF", self.dados["end_prest_mun"], 104.8, 49.3, 50.9, 6.5)
-        self.pdf.draw_field(
-            "CÓDIGO IBGE / CEP", self.dados["end_prest_cep"], 155.7, 49.3, 51.3, 6.5
-        )
+        self.pdf.draw_field("CÓDIGO IBGE / CEP", self.dados["end_prest_cep"], 155.7, 49.3, 51.3, 6.5)
 
-        self.pdf.draw_field(
-            "SIMPLES NACIONAL NA COMPETÊNCIA", self.dados["opSimpNac"], 3, 55.8, 101.8, 6.5
-        )
-        self.pdf.draw_field(
-            "REGIME DE APURAÇÃO SN", self.dados["regApTribSN"], 104.8, 55.8, 102.2, 6.5
-        )
+        self.pdf.draw_field("SIMPLES NACIONAL NA COMPETÊNCIA", self.dados["opSimpNac"], 3, 55.8, 101.8, 6.5)
+        self.pdf.draw_field("REGIME DE APURAÇÃO SN", self.dados["regApTribSN"], 104.8, 55.8, 102.2, 6.5)
 
         y_toma = 62.3
         if self.dados["cnpj_toma"] == "-":
@@ -772,12 +645,8 @@ class DanfseGenerator:
             toma_offset = 6.5
         else:
             self.pdf.draw_field("TOMADOR DO SERVIÇO", "", 3, y_toma, 50.9, 6.3, fill=True)
-            self.pdf.draw_field(
-                "CNPJ / CPF / NIF", self.dados["cnpj_toma"], 53.9, y_toma, 50.9, 6.3
-            )
-            self.pdf.draw_field(
-                "INSCRIÇÃO MUNICIPAL", self.dados["im_toma"], 104.8, y_toma, 50.9, 6.3
-            )
+            self.pdf.draw_field("CNPJ / CPF / NIF", self.dados["cnpj_toma"], 53.9, y_toma, 50.9, 6.3)
+            self.pdf.draw_field("INSCRIÇÃO MUNICIPAL", self.dados["im_toma"], 104.8, y_toma, 50.9, 6.3)
             self.pdf.draw_field("TELEFONE", self.dados["fone_toma"], 155.7, y_toma, 51.3, 6.3)
 
             self.pdf.draw_multiline_field(
@@ -785,15 +654,9 @@ class DanfseGenerator:
             )
             self.pdf.draw_field("E-MAIL", self.dados["email_toma"], 155.7, y_toma + 6.3, 51.3, 6.5)
 
-            self.pdf.draw_multiline_field(
-                "ENDEREÇO", self.dados["end_toma_lgr"], 3, y_toma + 12.8, 101.8, 6.5
-            )
-            self.pdf.draw_field(
-                "MUNICÍPIO / UF", self.dados["end_toma_mun"], 104.8, y_toma + 12.8, 50.9, 6.5
-            )
-            self.pdf.draw_field(
-                "CÓDIGO IBGE / CEP", self.dados["end_toma_cep"], 155.7, y_toma + 12.8, 51.3, 6.5
-            )
+            self.pdf.draw_multiline_field("ENDEREÇO", self.dados["end_toma_lgr"], 3, y_toma + 12.8, 101.8, 6.5)
+            self.pdf.draw_field("MUNICÍPIO / UF", self.dados["end_toma_mun"], 104.8, y_toma + 12.8, 50.9, 6.5)
+            self.pdf.draw_field("CÓDIGO IBGE / CEP", self.dados["end_toma_cep"], 155.7, y_toma + 12.8, 51.3, 6.5)
             toma_offset = 19.3
 
         y_dest = y_toma + toma_offset
@@ -821,9 +684,7 @@ class DanfseGenerator:
             dest_offset = 6.5
         else:
             self.pdf.draw_field("DESTINATÁRIO DA OPERAÇÃO", "", 3, y_dest, 50.9, 6.3, fill=True)
-            self.pdf.draw_field(
-                "CNPJ / CPF / NIF", self.dados["cnpj_dest"], 53.9, y_dest, 50.9, 6.3
-            )
+            self.pdf.draw_field("CNPJ / CPF / NIF", self.dados["cnpj_dest"], 53.9, y_dest, 50.9, 6.3)
             self.pdf.draw_field("INSCRIÇÃO MUNICIPAL", "-", 104.8, y_dest, 50.9, 6.3)
             self.pdf.draw_field("TELEFONE", self.dados["fone_dest"], 155.7, y_dest, 51.3, 6.3)
 
@@ -832,15 +693,9 @@ class DanfseGenerator:
             )
             self.pdf.draw_field("E-MAIL", self.dados["email_dest"], 155.7, y_dest + 6.3, 51.3, 6.5)
 
-            self.pdf.draw_multiline_field(
-                "ENDEREÇO", self.dados["end_dest_lgr"], 3, y_dest + 12.8, 101.8, 6.5
-            )
-            self.pdf.draw_field(
-                "MUNICÍPIO / UF", self.dados["end_dest_mun"], 104.8, y_dest + 12.8, 50.9, 6.5
-            )
-            self.pdf.draw_field(
-                "CÓDIGO IBGE / CEP", self.dados["end_dest_cep"], 155.7, y_dest + 12.8, 51.3, 6.5
-            )
+            self.pdf.draw_multiline_field("ENDEREÇO", self.dados["end_dest_lgr"], 3, y_dest + 12.8, 101.8, 6.5)
+            self.pdf.draw_field("MUNICÍPIO / UF", self.dados["end_dest_mun"], 104.8, y_dest + 12.8, 50.9, 6.5)
+            self.pdf.draw_field("CÓDIGO IBGE / CEP", self.dados["end_dest_cep"], 155.7, y_dest + 12.8, 51.3, 6.5)
             dest_offset = 19.3
 
         y_int = y_dest + dest_offset
@@ -857,12 +712,8 @@ class DanfseGenerator:
             int_offset = 6.5
         else:
             self.pdf.draw_field("INTERMEDIÁRIO DA OPERAÇÃO", "", 3, y_int, 50.9, 6.3, fill=True)
-            self.pdf.draw_field(
-                "CNPJ / CPF / NIF", self.dados["cnpj_interm"], 53.9, y_int, 50.9, 6.3
-            )
-            self.pdf.draw_field(
-                "INSCRIÇÃO MUNICIPAL", self.dados["im_interm"], 104.8, y_int, 50.9, 6.3
-            )
+            self.pdf.draw_field("CNPJ / CPF / NIF", self.dados["cnpj_interm"], 53.9, y_int, 50.9, 6.3)
+            self.pdf.draw_field("INSCRIÇÃO MUNICIPAL", self.dados["im_interm"], 104.8, y_int, 50.9, 6.3)
             self.pdf.draw_field("TELEFONE", self.dados["fone_interm"], 155.7, y_int, 51.3, 6.3)
 
             self.pdf.draw_multiline_field(
@@ -870,34 +721,22 @@ class DanfseGenerator:
             )
             self.pdf.draw_field("E-MAIL", self.dados["email_interm"], 155.7, y_int + 6.3, 51.3, 6.5)
 
-            self.pdf.draw_multiline_field(
-                "ENDEREÇO", self.dados["end_interm_lgr"], 3, y_int + 12.8, 101.8, 6.5
-            )
-            self.pdf.draw_field(
-                "MUNICÍPIO / UF", self.dados["end_interm_mun"], 104.8, y_int + 12.8, 50.9, 6.5
-            )
-            self.pdf.draw_field(
-                "CÓDIGO IBGE / CEP", self.dados["end_interm_cep"], 155.7, y_int + 12.8, 51.3, 6.5
-            )
+            self.pdf.draw_multiline_field("ENDEREÇO", self.dados["end_interm_lgr"], 3, y_int + 12.8, 101.8, 6.5)
+            self.pdf.draw_field("MUNICÍPIO / UF", self.dados["end_interm_mun"], 104.8, y_int + 12.8, 50.9, 6.5)
+            self.pdf.draw_field("CÓDIGO IBGE / CEP", self.dados["end_interm_cep"], 155.7, y_int + 12.8, 51.3, 6.5)
             int_offset = 19.3
 
         y_serv = y_int + int_offset
         self.pdf.draw_field("SERVIÇO PRESTADO", "", 3, y_serv, 50.9, 6.3, fill=True)
-        self.pdf.draw_field(
-            "CÓDIGO DE TRIBUTAÇÃO NACIONAL", self.dados["cTribNac"], 53.9, y_serv, 50.9, 6.3
-        )
-        self.pdf.draw_field(
-            "LOCAL DA PRESTAÇÃO", self.dados["loc_prest_formatado"], 104.8, y_serv, 50.9, 6.3
-        )
+        self.pdf.draw_field("CÓDIGO DE TRIBUTAÇÃO NACIONAL", self.dados["cTribNac"], 53.9, y_serv, 50.9, 6.3)
+        self.pdf.draw_field("LOCAL DA PRESTAÇÃO", self.dados["loc_prest_formatado"], 104.8, y_serv, 50.9, 6.3)
         self.pdf.draw_field("PAÍS DA PRESTAÇÃO", "-", 155.7, y_serv, 51.3, 6.3)
 
         h_desc = 284.7 - 111.5 - (y_serv + 6.3)
         if h_desc < 12.0:
             h_desc = 12.0
 
-        self.pdf.draw_multiline_field(
-            "DESCRIÇÃO DO SERVIÇO", self.dados["xDescServ"], 3, y_serv + 6.3, 204.0, h_desc
-        )
+        self.pdf.draw_multiline_field("DESCRIÇÃO DO SERVIÇO", self.dados["xDescServ"], 3, y_serv + 6.3, 204.0, h_desc)
 
         y_iss = y_serv + 6.3 + h_desc
         if self.dados["tribISSQN"] == "-":
@@ -914,92 +753,54 @@ class DanfseGenerator:
         else:
             self.pdf.draw_field("TRIBUTAÇÃO DO ISSQN", "Operação Tributável", 3, y_iss, 50.9, 6.3)
             self.pdf.draw_field("PAÍS RESULTADO DA PRESTAÇÃO", "-", 53.9, y_iss, 50.9, 6.3)
-            self.pdf.draw_field(
-                "MUNICÍPIO DE INCIDÊNCIA DO ISSQN", f"{mun_nome} - ES", 104.8, y_iss, 50.9, 6.3
-            )
+            self.pdf.draw_field("MUNICÍPIO DE INCIDÊNCIA DO ISSQN", f"{mun_nome} - ES", 104.8, y_iss, 50.9, 6.3)
             self.pdf.draw_field("REGIME ESPECIAL DE TRIBUTAÇÃO", "Nenhum", 155.7, y_iss, 51.3, 6.3)
             self.pdf.draw_field("TIPO DE IMUNIDADE", "-", 3, y_iss + 6.3, 50.9, 6.3)
-            self.pdf.draw_field(
-                "SUSPENSÃO DA EXIGIBILIDADE DO ISSQN", "Não", 53.9, y_iss + 6.3, 50.9, 6.3
-            )
+            self.pdf.draw_field("SUSPENSÃO DA EXIGIBILIDADE DO ISSQN", "Não", 53.9, y_iss + 6.3, 50.9, 6.3)
             self.pdf.draw_field("NÚMERO PROCESSO SUSPENSÃO", "-", 104.8, y_iss + 6.3, 50.9, 6.3)
             self.pdf.draw_field("BENEFÍCIO MUNICIPAL", "-", 155.7, y_iss + 6.3, 51.3, 6.3)
             self.pdf.draw_field("VALOR DO SERVIÇO", self.dados["vServ"], 3, y_iss + 12.6, 50.9, 6.3)
-            self.pdf.draw_field(
-                "DESCONTO INCONDICIONADO", self.dados["vDescIncond"], 53.9, y_iss + 12.6, 50.9, 6.3
-            )
+            self.pdf.draw_field("DESCONTO INCONDICIONADO", self.dados["vDescIncond"], 53.9, y_iss + 12.6, 50.9, 6.3)
             self.pdf.draw_field("TOTAL DEDUÇÕES / REDUÇÕES", "-", 104.8, y_iss + 12.6, 50.9, 6.3)
             self.pdf.draw_field("CÁLCULO DO BM", "-", 155.7, y_iss + 12.6, 51.3, 6.3)
-            self.pdf.draw_field(
-                "BASE DE CÁLCULO ISSQN", self.dados["vBC"], 3, y_iss + 18.9, 50.9, 6.5
-            )
-            self.pdf.draw_field(
-                "ALÍQUOTA APLICADA", self.dados["pAliqAplic"], 53.9, y_iss + 18.9, 50.9, 6.5
-            )
+            self.pdf.draw_field("BASE DE CÁLCULO ISSQN", self.dados["vBC"], 3, y_iss + 18.9, 50.9, 6.5)
+            self.pdf.draw_field("ALÍQUOTA APLICADA", self.dados["pAliqAplic"], 53.9, y_iss + 18.9, 50.9, 6.5)
             self.pdf.draw_field("RETENÇÃO DO ISSQN", "Não Retido", 104.8, y_iss + 18.9, 50.9, 6.5)
-            self.pdf.draw_field(
-                "ISSQN APURADO", self.dados["vISSQN"], 155.7, y_iss + 18.9, 51.3, 6.5
-            )
+            self.pdf.draw_field("ISSQN APURADO", self.dados["vISSQN"], 155.7, y_iss + 18.9, 51.3, 6.5)
             iss_offset = 25.4
 
         y_fed = y_iss + iss_offset
         self.pdf.draw_field("IRRF", self.dados["vRetIRRF"], 3, y_fed, 50.9, 6.3)
-        self.pdf.draw_field(
-            "CONTRIBUIÇÃO PREVIDENCIÁRIA - RETIDA", self.dados["vRetCP"], 53.9, y_fed, 50.9, 6.3
-        )
-        self.pdf.draw_field(
-            "CONTRIBUIÇÕES SOCIAIS - RETIDAS", self.dados["vRetCSLL"], 104.8, y_fed, 50.9, 6.3
-        )
+        self.pdf.draw_field("CONTRIBUIÇÃO PREVIDENCIÁRIA - RETIDA", self.dados["vRetCP"], 53.9, y_fed, 50.9, 6.3)
+        self.pdf.draw_field("CONTRIBUIÇÕES SOCIAIS - RETIDAS", self.dados["vRetCSLL"], 104.8, y_fed, 50.9, 6.3)
         self.pdf.draw_field("DESCRIÇÃO CONTRIB. SOCIAIS - RETIDAS", "-", 155.7, y_fed, 51.3, 6.3)
-        self.pdf.draw_field(
-            "PIS - DÉBITO APURAÇÃO PRÓPRIA", self.dados["vPis"], 3, y_fed + 6.3, 50.9, 6.5
-        )
-        self.pdf.draw_field(
-            "COFINS - DÉBITO APURAÇÃO PRÓPRIA", self.dados["vCofins"], 53.9, y_fed + 6.3, 50.9, 6.5
-        )
-        self.pdf.draw_field(
-            "DESCRIÇÃO CONTRIB. SOCIAIS RETIDAS", "-", 104.8, y_fed + 6.3, 102.2, 6.5
-        )
+        self.pdf.draw_field("PIS - DÉBITO APURAÇÃO PRÓPRIA", self.dados["vPis"], 3, y_fed + 6.3, 50.9, 6.5)
+        self.pdf.draw_field("COFINS - DÉBITO APURAÇÃO PRÓPRIA", self.dados["vCofins"], 53.9, y_fed + 6.3, 50.9, 6.5)
+        self.pdf.draw_field("DESCRIÇÃO CONTRIB. SOCIAIS RETIDAS", "-", 104.8, y_fed + 6.3, 102.2, 6.5)
         fed_offset = 12.8
 
         has_ibscbs = self.dados.get("has_ibscbs", False)
         y_ibs = y_fed + fed_offset
         if has_ibscbs:
             self.pdf.draw_field("CST / CCLASSTRIB", "Op. Isenta", 3, y_ibs, 50.9, 6.3)
-            self.pdf.draw_field(
-                "IND. OP. / CÓD. MUNICÍPIO / SIGLA UF", "-", 53.9, y_ibs, 153.1, 6.3
-            )
+            self.pdf.draw_field("IND. OP. / CÓD. MUNICÍPIO / SIGLA UF", "-", 53.9, y_ibs, 153.1, 6.3)
             self.pdf.draw_field("EXCLUSÕES/REDUÇÕES BC", "-", 3, y_ibs + 6.3, 50.9, 6.3)
             self.pdf.draw_field("ALÍQUOTA - CBS", "-", 53.9, y_ibs + 18.9, 50.9, 6.5)
             self.pdf.draw_field("ALÍQUOTA EFETIVA - CBS", "-", 104.8, y_ibs + 18.9, 50.9, 6.5)
-            self.pdf.draw_field(
-                "VALOR TOTAL APURADO - CBS", self.dados["vCBS"], 155.7, y_ibs + 18.9, 51.3, 6.5
-            )
+            self.pdf.draw_field("VALOR TOTAL APURADO - CBS", self.dados["vCBS"], 155.7, y_ibs + 18.9, 51.3, 6.5)
             ibs_offset = 25.4
         else:
             ibs_offset = 0
 
         y_tot = y_ibs + ibs_offset
         if has_ibscbs:
-            self.pdf.draw_field(
-                "VALOR DA OPERAÇÃO / SERVIÇO", self.dados["vServ"], 3, y_tot, 50.9, 6.7
-            )
-            self.pdf.draw_field(
-                "DESCONTO INCONDICIONADO", self.dados["vDescIncond"], 53.9, y_tot, 50.9, 6.7
-            )
-            self.pdf.draw_field(
-                "DESCONTO CONDICIONADO", self.dados["vDescCond"], 104.8, y_tot, 50.9, 6.7
-            )
-            self.pdf.draw_field(
-                "TOTAL RETENÇÕES (ISSQN/FEDERAIS)", self.dados["vTotalRet"], 155.7, y_tot, 51.3, 6.7
-            )
+            self.pdf.draw_field("VALOR DA OPERAÇÃO / SERVIÇO", self.dados["vServ"], 3, y_tot, 50.9, 6.7)
+            self.pdf.draw_field("DESCONTO INCONDICIONADO", self.dados["vDescIncond"], 53.9, y_tot, 50.9, 6.7)
+            self.pdf.draw_field("DESCONTO CONDICIONADO", self.dados["vDescCond"], 104.8, y_tot, 50.9, 6.7)
+            self.pdf.draw_field("TOTAL RETENÇÕES (ISSQN/FEDERAIS)", self.dados["vTotalRet"], 155.7, y_tot, 51.3, 6.7)
 
-            self.pdf.draw_field(
-                "VALOR LÍQUIDO DA NFS-E", self.dados["vLiq"], 3, y_tot + 6.7, 50.9, 6.7
-            )
-            self.pdf.draw_field(
-                "TOTAL DO IBS / CBS", self.dados["vIBSTot"], 53.9, y_tot + 6.7, 50.9, 6.7
-            )
+            self.pdf.draw_field("VALOR LÍQUIDO DA NFS-E", self.dados["vLiq"], 3, y_tot + 6.7, 50.9, 6.7)
+            self.pdf.draw_field("TOTAL DO IBS / CBS", self.dados["vIBSTot"], 53.9, y_tot + 6.7, 50.9, 6.7)
             self.pdf.draw_field(
                 "VALOR LÍQUIDO NFS-E + IBS/CBS",
                 self.dados["vTotNF"],
@@ -1011,19 +812,13 @@ class DanfseGenerator:
             )
         else:
             self.pdf.draw_field("VALOR DO SERVIÇO", self.dados["vServ"], 3, y_tot, 50.9, 6.7)
-            self.pdf.draw_field(
-                "DESCONTO CONDICIONADO", self.dados["vDescCond"], 53.9, y_tot, 50.9, 6.7
-            )
-            self.pdf.draw_field(
-                "DESCONTO INCONDICIONADO", self.dados["vDescIncond"], 104.8, y_tot, 50.9, 6.7
-            )
+            self.pdf.draw_field("DESCONTO CONDICIONADO", self.dados["vDescCond"], 53.9, y_tot, 50.9, 6.7)
+            self.pdf.draw_field("DESCONTO INCONDICIONADO", self.dados["vDescIncond"], 104.8, y_tot, 50.9, 6.7)
 
             vISSQN_retido = self.dados["vISSQN"] if self.dados.get("is_retido", False) else "-"
             self.pdf.draw_field("ISSQN RETIDO", vISSQN_retido, 155.7, y_tot, 51.3, 6.7)
 
-            self.pdf.draw_field(
-                "TOTAL DAS RETENÇÕES FEDERAIS", self.dados["vTotalRet"], 3, y_tot + 6.7, 50.9, 6.7
-            )
+            self.pdf.draw_field("TOTAL DAS RETENÇÕES FEDERAIS", self.dados["vTotalRet"], 3, y_tot + 6.7, 50.9, 6.7)
             self.pdf.draw_field(
                 "PIS/COFINS - DÉBITO APUR. PRÓPRIA",
                 self.dados["vPisCofinsTotal"],

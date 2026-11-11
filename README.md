@@ -30,18 +30,26 @@
 - **Consulta e Download de Notas (`ClienteNfseNacional`)**:
   - Consulta de **notas emitidas** e **notas recebidas** via portal web ou diretamente pela API de distribuição DFe do ADN por NSU.
   - Download de **XML** e **PDF/DANFS-e** organizados dinamicamente por cliente, tipo, ano, mês, status e extensão.
+  - **Fallback inteligente**: se o download do PDF for bloqueado por Captcha, recupera a impressão em HTML, reconstrói o XML padrão SPED e sintetiza a DANFS-e em PDF automaticamente.
+- **Reconstrução de XML a partir de HTML (`html_to_xml`)**:
+  - Reconstrói a estrutura XML oficial `<NFSe>` e `<DPS>` no namespace SPED a partir do HTML de impressão (`Visualizar/Impressao`), recuperando todos os campos de prestador, tomador, endereço, NBS, código de tributação nacional e impostos.
 - **Geração Offline de DANFS-e em PDF (`DanfseGenerator`)**:
-  - Gera o PDF da DANFS-e fiel ao layout oficial (com QR Code, brasão municipal e marca d'água para notas canceladas/substituídas) diretamente a partir do XML, contornando bloqueios de Captcha/403 do portal.
-  - Fallback adicional para HTML de impressão quando o XML não estiver disponível localmente.
+  - Gera o PDF da DANFS-e fiel ao layout oficial (com QR Code, brasão municipal e marca d'água para notas canceladas/substituídas) aceitando tanto **caminho de arquivo XML** quanto **string XML direta**.
+  - Extração resiliente de campos (competência da DPS, alíquotas e base de cálculo).
+- **Módulo Central de Constantes (`constants.py`)**:
+  - Centraliza namespaces XML (`NS_NFSE`, `NS_DSIG`), tabelas de conversão de UFs, mapa bidirecional e tolerante a acentos para códigos de municípios do IBGE e tabelas de domínio tributário.
 
 ## Estrutura atual do repositório
 
 - `main.py`: script de exemplo para autenticar, consultar e baixar notas
 - `pynfse/`: pacote principal da biblioteca
-  - `pynfse/adn/`: subpacote Sefin Nacional / ADN v1.01 (catálogos, motor IBS/CBS, construtores XML, validador XSD, assinador XML-DSig e cliente mTLS assíncrono)
+  - `pynfse/adn/`: subpacote Sefin Nacional / ADN v1.01 (catálogos, motor IBS/CBS, construtores XML, validador XSD, assinador XML-DSig e cliente mTLS assíncrono `httpx2`)
   - `pynfse/assets/`: logotipos e brasões utilizados na geração da DANFS-e
+  - `pynfse/constants.py`: namespaces e tabelas de domínio (UFs, IBGE, opções tributárias)
+  - `pynfse/html_to_xml.py`: conversor de HTML de impressão da NFS-e para XML padrão SPED
+  - `pynfse/utils.py`: utilitários compartilhados (datas, moedas, limpeza e formatação de documentos, XML)
 - `tests/`: suíte de testes automatizados (`pytest`)
-- `docs/`: documentação técnica, guia de API e enciclopédias de tags da NFS-e Nacional
+- `docs/`: documentação técnica, guia de API, manuais oficiais e enciclopédias de tags da NFS-e Nacional
 - `scripts/`: scripts auxiliares (geração de badge de cobertura)
 - `pyproject.toml`: metadados do pacote `pynfse` v0.2.0, dependências e configuração do `pytest` e `ruff`
 
@@ -205,8 +213,21 @@ async def enviar():
 ```python
 from pynfse import DanfseGenerator
 
+# Aceita caminho de arquivo ou string XML direta
 gerador = DanfseGenerator("caminho/para/nota.xml", status="NORMAL")
 gerador.gerar_pdf("caminho/para/danfse.pdf")
+```
+
+### 4. Conversão de HTML de Impressão para XML SPED (`html_to_xml`)
+
+```python
+from pynfse import converter_arquivo_html_para_xml, DanfseGenerator
+
+# Converte o HTML de impressão baixado para XML SPED oficial
+caminho_xml = converter_arquivo_html_para_xml("caminho/para/impressao.html")
+
+# E gera o DANFSe em PDF imediatamente
+DanfseGenerator(caminho_xml).gerar_pdf("caminho/para/danfse.pdf")
 ```
 
 ## Estrutura de downloads
@@ -226,7 +247,7 @@ downloads/
 
 ## Testes e qualidade
 
-O projeto usa `pytest` para testes automatizados e `ruff` para lint:
+O projeto usa `pytest` para testes automatizados e `ruff` para checagem e formatação:
 
 ```bash
 pytest -q
@@ -241,6 +262,10 @@ A documentação detalhada fica em `docs/`:
 - [Guia de uso](docs/usage.md)
 - [Referência da API](docs/api.md)
 - [Arquitetura](docs/architecture.md)
+- [Troubleshooting](docs/troubleshooting.md)
+- [Dicionário de 360 Tags Únicas da NFS-e](docs/dicionario_360_tags_unicas_nfse.md) (com versão PDF)
+- [Enciclopédia Completa de 645 Tags da NFS-e Nacional](docs/enciclopedia_completa_tags_nfse_nacional_645.md) (com versão PDF)
+- Manual Oficial da NFS-e Nacional (`docs/manual_nfse_nacional_2026_2027.pdf`)
 - [Troubleshooting](docs/troubleshooting.md)
 - [Dicionário de 360 Tags Únicas da NFS-e](docs/dicionario_360_tags_unicas_nfse.md)
 - [Enciclopédia Completa de 645 Tags da NFS-e Nacional](docs/enciclopedia_completa_tags_nfse_nacional_645.md)
