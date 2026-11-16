@@ -284,4 +284,317 @@ def test_adn_nfse_client_methods(sample_pfx: tuple[str, str]):
             assert (await client.consultar_eventos(chave_teste))["sucesso"] is True
             assert (await client.consultar_parametros_municipais("3201308"))["sucesso"] is True
 
+            # 6. Modo XML direto (enviar_gzip_json=False) e tratamento de erro HTTP 400
+            res_err = MagicMock()
+            res_err.status_code = 400
+            res_err.headers = {"content-type": "text/plain"}
+            res_err.text = "Rejeicao E0001"
+            mock_http_instance.post.return_value = res_err
+
+            r_emit_xml = await client.emitir_dps("<DPS/>", enviar_gzip_json=False)
+            assert r_emit_xml["sucesso"] is False
+            assert r_emit_xml["status_code"] == 400
+
+            r_evt_xml = await client.enviar_evento("<pedRegEvento/>", chave_nfse=chave_teste, enviar_gzip_json=False)
+            assert r_evt_xml["sucesso"] is False
+
     asyncio.run(_run_client_calls())
+
+    # Inicialização do AdnNfseClient diretamente via cert_path + cert_password
+    client_from_pfx = AdnNfseClient(ambiente="producao", cert_path=pfx_path, cert_password=pfx_pwd)
+    assert client_from_pfx.base_url.startswith("https://")
+
+
+def test_pynfse_deep_coverage_builders_validators_and_danfse(sample_pfx: tuple[str, str], tmp_path):
+    from pynfse import DanfseGenerator
+    from pynfse.utils import (
+        clean_digits,
+        extrair_codigo_inicial,
+        format_cep,
+        format_cnpj_cpf,
+        format_currency,
+        format_date,
+        format_percent,
+        format_phone,
+        parse_currency,
+        parse_datetime,
+    )
+
+    # 1. Filtros combinados em catalog_service
+    assert len(listar_cclasstrib(cst="200", apenas_nfse=True, q="saúde")) >= 1
+    assert len(listar_servicos_ctribnac(item_lc116="01.01", q="sistemas", limite=1)) == 1
+    assert obter_servico_ctribnac("999999") is None
+    assert (
+        len(
+            buscar_correlacoes_anexo_viii(
+                item_lc116="01.01",
+                c_nbs="11502",
+                c_class_trib="000001",
+                indop="100301",
+                q="desenvolvimento",
+                limite=1,
+            )
+        )
+        == 1
+    )
+
+    # 2. Tax calculator overrides e todas as regras de validação IBS/CBS
+    res_full = calcular_tributacao(
+        valor_servicos=10000.0,
+        data_competencia="15/05/2026",
+        regime_prestador="simples",
+        apurar_ibscbs_simples=True,
+        cClassTrib="200029",
+        aliquota_iss_informada=3.0,
+        iss_retido=True,
+        reter_federais=True,
+        v_pis_informado=50.0,
+        v_cofins_informado=200.0,
+        v_irrf_informado=150.0,
+        v_csll_informado=100.0,
+        v_inss_informado=110.0,
+        p_ibs_uf=1.0,
+        p_ibs_mun=0.5,
+        p_cbs=2.0,
+        p_red_aliq_uf=50.0,
+        p_red_aliq_mun=50.0,
+        p_red_aliq_cbs=50.0,
+        p_dif_uf=10.0,
+        p_dif_mun=10.0,
+        p_dif_cbs=10.0,
+        c_cred_pres="01",
+        cst_reg="000",
+        c_class_trib_reg="000001",
+        tp_ente_gov=1,
+        p_redutor_gov=10.0,
+        v_ibs_est_cred=5.0,
+        v_cbs_est_cred=10.0,
+        ind_doacao=1,
+    )
+    assert res_full["retencoes_federais"]["irrf"] == 150.0
+    assert res_full["reforma_tributaria"]["ibs_uf"]["vDifUF"] > 0
+    res_full["v_tot_trib"] = {"fed": 100.0, "est": 20.0, "mun": 50.0}
+
+    # Constrói DPS com todos os campos opcionais de servico, retenções federais e grupos IBSCBS
+    xml_dps_full = build_dps_xml(
+        prestador={
+            "cnpj": "19495981000113",
+            "inscricao_municipal": "12345",
+            "codigo_municipio": "3201308",
+            "regime": "normal",
+            "fone": "2733334444",
+            "email": "fiscal@empresa.com",
+        },
+        tomador={
+            "documento": "12345678901",
+            "razao_social": "TOMADOR PF COMPLETO",
+            "inscricao_municipal": "999",
+            "fone": "27999998888",
+            "email": "pf@cliente.com",
+            "endereco": {
+                "codigo_municipio": "3201308",
+                "cep": "29140000",
+                "logradouro": "AV CENTRAL",
+                "numero": "10",
+                "complemento": "APTO 101",
+                "bairro": "CENTRO",
+            },
+        },
+        servico={
+            "codigo_municipio_prestacao": "3201308",
+            "cTribNac": "010101",
+            "cTribMun": "001",
+            "descricao": "Desenvolvimento completo",
+            "cNBS": "115021000",
+            "cIntContrib": "SRV-001",
+            "idDocTec": "ART-123",
+            "docRef": "CONTRATO-2026",
+            "xInfComp": "Informacoes complementares da nota",
+            "valor": 10000.0,
+            "valor_recebido": 9500.0,
+            "desconto_incondicionado": 100.0,
+            "desconto_condicionado": 50.0,
+            "cClassTrib": "200029",
+            "indop": "100301",
+            "indFinal": 1,
+            "tpOper": 1,
+            "refNFSe": ["32013082219495981000113202604000000000000110123456"],
+            "tpEnteGov": 1,
+            "cCredPres": "01",
+            "tributacao_regular": {"CSTReg": "000", "cClassTribReg": "000001"},
+        },
+        tributacao=res_full,
+        serie_dps="900",
+        numero_dps=55,
+        ambiente="producao",
+    )
+    assert "<tribFed>" in xml_dps_full
+    assert "<gTribRegular>" in xml_dps_full
+    assert "<gDif>" in xml_dps_full
+    assert "<infoCompl>" in xml_dps_full
+
+    val_errs = validar_regras_ibscbs(
+        c_class_trib="000001",
+        cst="000",
+        c_ind_op="999999",
+        tp_oper=2,
+        tem_ref_nfse=False,
+        ind_dest=0,
+        tem_destinatario=True,
+        tp_ente_gov=9,
+        p_dif_uf=10.0,
+    )
+    assert val_errs["valido"] is False
+    assert len(val_errs["erros"]) >= 3
+
+    # 3. Evento builder validações de erro e autor CPF
+    with pytest.raises(ValueError):
+        build_evento_cancelamento_xml(chave_nfse="123", documento_autor="19495981000113")
+    with pytest.raises(ValueError):
+        build_evento_cancelamento_xml(chave_nfse="1" * 50, documento_autor="123")
+    with pytest.raises(ValueError):
+        build_evento_cancelamento_xml(chave_nfse="1" * 50, documento_autor="19495981000113", motivo_descricao="curto")
+
+    xml_canc_cpf = build_evento_cancelamento_xml(
+        chave_nfse="52087072219495981000113202604000000000000110123456",
+        documento_autor="12345678901",
+    )
+    assert "<CPFAutor>12345678901</CPFAutor>" in xml_canc_cpf
+
+    # 4. XsdValidator com XML malformado e validar_nfse
+    assert XsdValidator.validar_dps("<xml_invalido")["valido"] is False
+    assert XsdValidator.validar_evento("<xml_invalido")["valido"] is False
+    assert XsdValidator.validar_nfse("<xml_invalido")["valido"] is False
+
+    # 5. DanfseGenerator com marca d'água CANCELADA e SUBSTITUÍDA
+    xml_nfse_sample = """<?xml version="1.0" encoding="utf-8"?>
+    <NFSe xmlns="http://www.sped.fazenda.gov.br/nfse" versao="1.01">
+      <infNFSe Id="NFS32013082219495981000113202604000000000000110123456">
+        <xLocEmi>Cariacica</xLocEmi>
+        <xLocPrestacao>Cariacica</xLocPrestacao>
+        <nNFSe>1</nNFSe>
+        <cLocIncid>3201308</cLocIncid>
+        <xLocIncid>Cariacica</xLocIncid>
+        <xTribNac>Análise e desenvolvimento de sistemas</xTribNac>
+        <xNBS>Serviços de desenvolvimento de software</xNBS>
+        <verAplic>1.0</verAplic>
+        <ambGer>2</ambGer>
+        <tpEmis>1</tpEmis>
+        <procEmi>1</procEmi>
+        <cStat>100</cStat>
+        <dhProc>2026-04-15T10:30:00-03:00</dhProc>
+        <nDFSe>1</nDFSe>
+        <emit>
+          <CNPJ>19495981000113</CNPJ>
+          <xNome>EMPRESA TESTE LTDA</xNome>
+          <enderNac><xLgr>RUA A</xLgr><nro>10</nro><xBairro>CENTRO</xBairro><cMun>3201308</cMun><UF>ES</UF><CEP>29140000</CEP></enderNac>
+        </emit>
+        <valores>
+          <vBC>1000.00</vBC><pAliqAplic>2.00</pAliqAplic><vISSQN>20.00</vISSQN><vLiq>1000.00</vLiq>
+        </valores>
+        <DPS versao="1.01">
+          <infDPS Id="DPS320130821949598100011300900000000000000001">
+            <tpAmb>2</tpAmb><dhEmi>2026-04-15T10:29:00-03:00</dhEmi><verAplic>1.0</verAplic><serie>900</serie><nDPS>1</nDPS><dCompet>2026-04-15</dCompet><tpEmit>1</tpEmit><cLocEmi>3201308</cLocEmi>
+            <prest><CNPJ>19495981000113</CNPJ><regTrib><opSimpNac>3</opSimpNac><regApTribSN>1</regApTribSN><regEspTrib>0</regEspTrib></regTrib></prest>
+            <toma><CPF>12345678901</CPF><xNome>CLIENTE PF</xNome></toma>
+            <serv><locPrest><cLocPrestacao>3201308</cLocPrestacao></locPrest><cServ><cTribNac>010101</cTribNac><xDescServ>Servico completo</xDescServ><cNBS>115021000</cNBS></cServ></serv>
+            <valores><vServPrest><vServ>1000.00</vServ></vServPrest><trib><tribMun><tribISSQN>1</tribISSQN><tpRetISSQN>1</tpRetISSQN><pAliq>2.00</pAliq></tribMun><totTrib><indTotTrib>0</indTotTrib></totTrib></trib></valores>
+          </infDPS>
+        </DPS>
+      </infNFSe>
+    </NFSe>"""
+    pdf_canc = tmp_path / "danfse_cancelada.pdf"
+    DanfseGenerator(xml_nfse_sample, status="CANCELADA").gerar_pdf(str(pdf_canc))
+    assert pdf_canc.exists()
+
+    # 6. Utils helpers
+    assert clean_digits("12.345-6") == "123456"
+    assert format_cnpj_cpf("12345678901") == "123.456.789-01"
+    assert format_cnpj_cpf("19495981000113") == "19.495.981/0001-13"
+    assert format_cep("29140000") == "29140-000"
+    assert format_phone("27999998888") == "(27) 99999-8888"
+    assert format_phone("2733334444") == "(27) 3333-4444"
+    assert format_currency(1234.56) == "R$ 1.234,56"
+    assert parse_currency("R$ 1.234,56") == 1234.56
+    assert format_percent(5.5) == "5,50%"
+    assert extrair_codigo_inicial("1 - Operação Normal") == "1"
+    assert parse_datetime("15/04/2026 às 10:20:30") is not None
+    assert format_date("2026-04-15", include_time=False) == "15/04/2026"
+
+    # 7. ClienteNfseNacional (_requisicao_adn, salvar_xml_adn, obter_impressao_html, _listar_notas_adn)
+    import base64
+    import gzip
+    import json
+
+    from pynfse import ClienteNfseNacional
+    from pynfse.danfse_generator import _obter_ou_baixar_logo_prefeitura
+
+    pfx_path, pfx_pwd = sample_pfx
+    cli_nac = ClienteNfseNacional(
+        usuario="19495981000113",
+        senha="123",
+        caminho_pfx=pfx_path,
+        senha_pfx=pfx_pwd,
+        save_path=str(tmp_path),
+    )
+    saved_xml = cli_nac.salvar_xml_adn(
+        xml_nfse_sample.encode("utf-8"),
+        "32013082219495981000113202604000000000000110123456",
+        "gerada",
+    )
+    assert saved_xml.endswith(".xml")
+
+    # Testar obter_impressao_html
+    mock_vis_resp = MagicMock()
+    mock_vis_resp.content = b'<html><body><a href="/EmissorNacional/Notas/Visualizar/Impressao/123">Imp</a></body></html>'
+    mock_imp_resp = MagicMock()
+    mock_imp_resp.text = "<html><body>Impressao OK</body></html>"
+    with patch.object(cli_nac.http, "enviar_requisicao", side_effect=[mock_vis_resp, mock_imp_resp]):
+        html_obtido = cli_nac.obter_impressao_html("32013082219495981000113202604000000000000110123456")
+        assert html_obtido == "<html><body>Impressao OK</body></html>"
+
+    # Testar _listar_notas_adn com lote GZip+Base64
+    gz_b64 = base64.b64encode(gzip.compress(xml_nfse_sample.encode("utf-8"))).decode("ascii")
+    mock_adn_resp1 = MagicMock()
+    mock_adn_resp1.json.return_value = {"LoteDFe": [{"NSU": 10, "ArquivoXml": gz_b64}]}
+    mock_adn_resp2 = MagicMock()
+    mock_adn_resp2.json.return_value = {"LoteDFe": []}
+    with patch.object(cli_nac, "_requisicao_adn", side_effect=[mock_adn_resp1, mock_adn_resp2]):
+        res_adn_list = cli_nac._listar_notas_adn("emitidas", "01/04/2026", "30/04/2026")
+        assert len(res_adn_list["notas"]) == 1
+
+    # Testar _requisicao_adn com mock de requests.request
+    mock_req_ok = MagicMock(status_code=200)
+    with (
+        patch("requests.request", return_value=mock_req_ok),
+        patch("time.sleep"),
+    ):
+        r_req = cli_nac._requisicao_adn("GET", "https://adn.nfse.gov.br/teste", headers={"X-Test": "1"})
+        assert r_req.status_code == 200
+
+    # Testar _obter_brasao_municipio com mock de urllib.request.urlopen
+    wiki_search_json = json.dumps({"query": {"search": [{"title": "Município Teste"}]}}).encode("utf-8")
+    wiki_page_html = (
+        b'<table class="infobox"><img alt="Bras\xc3\xa3o" '
+        b'src="//upload.wikimedia.org/wikipedia/commons/thumb/a/ab/Brasao.svg/200px-Brasao.svg.png"/></table>'
+    )
+    fake_png = b"\x89PNG\r\n\x1a\nfake"
+
+    def _fake_urlopen(req, timeout=5):
+        cm = MagicMock()
+        u = req.full_url if hasattr(req, "full_url") else str(req)
+        if "api.php" in u:
+            cm.__enter__.return_value.read.return_value = wiki_search_json
+        elif "/wiki/" in u:
+            cm.__enter__.return_value.read.return_value = wiki_page_html
+        else:
+            cm.__enter__.return_value.read.return_value = fake_png
+        return cm
+
+    with (
+        patch("urllib.request.urlopen", side_effect=_fake_urlopen),
+        patch("pathlib.Path.mkdir"),
+        patch("pathlib.Path.write_bytes"),
+    ):
+        brasao = _obter_ou_baixar_logo_prefeitura("CidadeFicticiaTeste", "ES")
+        assert brasao is not None

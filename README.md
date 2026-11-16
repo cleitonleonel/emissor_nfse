@@ -266,9 +266,6 @@ A documentação detalhada fica em `docs/`:
 - [Dicionário de 360 Tags Únicas da NFS-e](docs/dicionario_360_tags_unicas_nfse.md) (com versão PDF)
 - [Enciclopédia Completa de 645 Tags da NFS-e Nacional](docs/enciclopedia_completa_tags_nfse_nacional_645.md) (com versão PDF)
 - Manual Oficial da NFS-e Nacional (`docs/manual_nfse_nacional_2026_2027.pdf`)
-- [Troubleshooting](docs/troubleshooting.md)
-- [Dicionário de 360 Tags Únicas da NFS-e](docs/dicionario_360_tags_unicas_nfse.md)
-- [Enciclopédia Completa de 645 Tags da NFS-e Nacional](docs/enciclopedia_completa_tags_nfse_nacional_645.md)
 
 ## Autor
 
