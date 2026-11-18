@@ -270,6 +270,7 @@ class DPS(BaseModel):
     ambiente: str = "homologacao"
     incluir_ibscbs: bool = True
     versao_aplicativo: str = "NFSeManager-1.01"
+    versao_nt: str = "auto"
 
     @model_validator(mode="after")
     def _sync_regime_prestador(self) -> DPS:

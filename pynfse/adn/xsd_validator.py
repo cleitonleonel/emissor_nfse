@@ -46,8 +46,26 @@ class XsdValidator:
 
     @classmethod
     def validar_dps(cls, xml_content: str) -> Dict[str, Any]:
-        """Valida o XML contra DPS_v1.01.xsd."""
-        return cls._validate(xml_content, "DPS_v1.01.xsd")
+        """Valida o XML contra DPS_v1.01.xsd (compatível com layouts NT 004 v2.0 e NT 009 v1.01)."""
+        res = cls._validate(xml_content, "DPS_v1.01.xsd")
+        if res["valido"]:
+            return res
+
+        # Se o XML estiver no layout da NT 009 v1.01 (<finNFSe> dentro de <infDPS>),
+        # normaliza em memória para a estrutura do DPS_v1.01.xsd embutido e valida todos os tipos/campos
+        try:
+            doc = etree.fromstring(xml_content.encode("utf-8"))
+            inf_dps = doc.find("{http://www.sped.fazenda.gov.br/nfse}infDPS")
+            if inf_dps is not None and inf_dps.find("{http://www.sped.fazenda.gov.br/nfse}finNFSe") is not None:
+                from pynfse.adn.dps_builder import converter_xml_dps_layout_nt
+
+                xml_norm = converter_xml_dps_layout_nt(xml_content, para_nt009=False)
+                res_norm = cls._validate(xml_norm, "DPS_v1.01.xsd")
+                if res_norm["valido"]:
+                    return {"valido": True, "schema": "DPS_v1.01.xsd (NT 009 v1.01)", "erros": []}
+        except Exception:
+            pass
+        return res
 
     @classmethod
     def validar_evento(cls, xml_content: str) -> Dict[str, Any]:

@@ -123,11 +123,23 @@ Cliente assíncrono (`httpx2` + mTLS) para comunicação com a Sefin Nacional e 
 
 ### `pynfse.adn.catalog_service`
 
-Funções de consulta aos catálogos oficiais em memória:
+Funções de consulta aos catálogos oficiais em memória (e gestão de diretório externo via `PYNFSE_CATALOGS_DIR` ou `set_catalogs_dir`):
+- `set_catalogs_dir(path, reload=True) -> Path` / `get_catalogs_dir() -> Path` — define/consulta um diretório externo com preferência sobre os JSONs embarcados (ideal para cache gravável em produção/WFS/containers).
+- `reload_catalogs() -> Dict[str, Any]` — limpa o cache em memória e recarrega os catálogos do diretório ativo.
+- `obter_metadados_catalogos() -> Dict[str, Any]` — retorna versão da base RFB (`versao_db`, `data_versao_db`), versões dos Anexos VII e VIII, caminho ativo, flag `usando_override_externo` e contagens totais (`cst`, `cclasstrib`, `servicos_ctribnac`, `nbs`, `correlacoes`, `indop`).
 - `listar_cst(apenas_nfse=False)` / `obter_cst(cst)`
 - `listar_cclasstrib(cst=None, apenas_nfse=False, apenas_anexo_viii=False, q=None)` / `obter_cclasstrib(codigo)`
+- `listar_nbs(q=None, item_lc116=None, apenas_anexo_viii=False, limite=1000)` / `obter_nbs(c_nbs)` — consulta a tabela oficial completa com os **920 NBS**, relacionando descrições, itens da LC 116 e combinações do Anexo VIII / regra geral.
+- `validar_combinacao_nbs(c_nbs, c_class_trib, c_ind_op) -> Dict[str, Any]` — verifica se a trinca `(cNBS, cClassTrib, cIndOp)` consta no Anexo VIII, na calculadora oficial ou na regra geral (`CST 000 / cClassTrib 000001`).
 - `listar_servicos_ctribnac(item_lc116=None, q=None, limite=400)` / `obter_servico_ctribnac(c_trib_nac)`
 - `listar_subitens_lc116()`
 - `buscar_correlacoes_anexo_viii(q=None, item_lc116=None, c_trib_nac=None, c_nbs=None, c_class_trib=None, indop=None, limite=100)`
 - `listar_indop()` / `obter_indop(c_ind_op)`
 - `listar_favoritos()`
+
+### `pynfse.adn.catalog_updater`
+
+Atualização automática dos catálogos a partir **exclusivamente de fontes oficiais do governo** (API de Dados Abertos da Calculadora de Consumo da Receita Federal e planilhas Anexo VII / Anexo VIII publicadas em `gov.br/nfse`):
+- `verificar_atualizacao_oficial(timeout=15.0) -> Dict[str, Any]` — compara `versao_db` e URLs das planilhas oficiais locais contra as publicadas atualmente, indicando `precisa_atualizar` e `alteracoes`.
+- `atualizar_catalogos_oficiais(destino_dir=None, force=False, validar_calculadora=False, max_workers=2, timeout=20.0) -> Dict[str, Any]` — baixa as tabelas oficiais, gera/atualiza os JSONs (`cst_tabela.json`, `cclasstrib_tabela.json`, `nbs_tabela.json`, `anexo_viii_correlacao.json`, `indop_tabela.json`, `catalog_metadata.json`) no diretório informado (ou em `get_catalogs_dir()`) e recarrega o cache em memória. Com `validar_calculadora=True`, consulta também combinações aceitas pela API por amostragem/NBS respeitando baixa concorrência.
+- CLI embutida: `python -m pynfse.adn.catalog_updater --check` ou `python -m pynfse.adn.catalog_updater --dir /caminho/cache --force`.

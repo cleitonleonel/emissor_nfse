@@ -23,17 +23,23 @@ from pynfse.adn import (
     build_evento_substituicao_xml,
     buscar_correlacoes_anexo_viii,
     calcular_tributacao,
+    catalog_updater,
     formatar_id_dps,
     listar_cclasstrib,
     listar_cst,
     listar_favoritos,
     listar_indop,
+    listar_nbs,
     listar_servicos_ctribnac,
     listar_subitens_lc116,
     obter_cclasstrib,
     obter_cst,
     obter_indop,
+    obter_metadados_catalogos,
+    obter_nbs,
     obter_servico_ctribnac,
+    set_catalogs_dir,
+    validar_combinacao_nbs,
     validar_regras_ibscbs,
 )
 
@@ -55,16 +61,120 @@ def test_pynfse_adn_catalogs_full():
     assert len(listar_cst()) == 18
     assert len(listar_cst(apenas_nfse=True)) > 5
     assert obter_cst("200") is not None
-    assert len(listar_cclasstrib(apenas_nfse=False)) == 138
-    assert len(listar_cclasstrib(apenas_anexo_viii=True)) == 27
+    assert len(listar_cclasstrib(apenas_nfse=False)) >= 138
+    assert len(listar_cclasstrib(apenas_anexo_viii=True)) >= 27
+    assert obter_cclasstrib("820007") is not None
     assert len(listar_servicos_ctribnac()) == 338
     assert len(listar_subitens_lc116()) > 100
-    assert len(listar_indop()) == 28
+    assert len(listar_indop()) >= 28
     assert obter_indop("030101") is not None
+    assert obter_indop("010101") is not None
+    assert len(listar_nbs()) >= 900
+    assert obter_nbs("115021000") is not None
     assert len(listar_favoritos()) >= 6
     assert len(buscar_correlacoes_anexo_viii(c_trib_nac="010101")) >= 1
     assert obter_cclasstrib("200029")["perc_red_ibs"] == 60.0
     assert obter_servico_ctribnac("010101")["item_lc116"] == "01.01"
+
+    meta = obter_metadados_catalogos()
+    assert meta["totais"]["nbs"] >= 900
+    assert meta["totais"]["cclasstrib"] >= 170
+
+    val_ok = validar_combinacao_nbs("115021000", "000001", "100301")
+    assert val_ok["valido"] is True
+    val_bad = validar_combinacao_nbs("115021000", "999999", "999999")
+    assert val_bad["valido"] is False
+
+
+def test_pynfse_catalog_updater_with_override_dir(tmp_path):
+    import io
+
+    import openpyxl
+
+    # Monta planilhas mínimas em memória simulando Anexo VII e Anexo VIII do gov.br/nfse
+    wb7 = openpyxl.Workbook()
+    ws7 = wb7.active
+    ws7.append(["Código indOp", "Tipo de operação", "Característica do fornecimento", "Local do fornecimento a ser identificado no DFe", "Dispositivo Legal: LC 214/2025", "Observação", "indNFe", "indNFSe", "indNFSe Via", "NFSeLocIncidIBS"])
+    ws7.append(["100301", "Serviço oneroso", "Local", "Domicílio", "Art. 11", "", "", "S", "", "Domicílio principal do adquirente"])
+    buf7 = io.BytesIO()
+    wb7.save(buf7)
+
+    wb8 = openpyxl.Workbook()
+    ws8 = wb8.active
+    ws8.title = "tabela geral"
+    ws8.append(["Item LC 116", "Descrição Item", "NBS", "DESCRIÇÃO NBS", "COD_ATIV_SN", "DESCRIÇÃO ATIV_SN", "INDOP", "Local incidência IBS", "cClassTrib", "nome cClassTrib"])
+    ws8.append(["01.01", "Análise de sistemas", "1.1502.10.00", "Projeto e dev", "9", "Fator R", "100301", "Domicílio principal do adquirente", "000001", "Tributação integral"])
+    buf8 = io.BytesIO()
+    wb8.save(buf8)
+
+    class _FakeResp:
+        def __init__(self, payload=None, text="", content=b"", status_code=200):
+            self._payload = payload
+            self.text = text
+            self.content = content
+            self.status_code = status_code
+
+        def raise_for_status(self):
+            if self.status_code >= 400:
+                raise RuntimeError(f"HTTP {self.status_code}")
+
+        def json(self):
+            return self._payload
+
+    def _fake_get(url, headers=None, params=None, timeout=20.0):
+        if "dados-abertos/versao" in url:
+            return _FakeResp({"versaoDb": "V9999", "dataVersaoDb": "2026-12-01", "descricaoVersaoDb": "Teste"})
+        if "situacoes-tributarias/cbs-ibs" in url:
+            return _FakeResp([{"codigo": "000", "descricao": "Tributação integral", "classificacoesTributarias": [{"codigo": "000001"}]}])
+        if "classificacoes-tributarias/cbs-ibs" in url:
+            return _FakeResp([
+                {
+                    "codigo": "000001",
+                    "descricao": "Tributação integral",
+                    "descricaoTratamentoTributario": "Tributação integral",
+                    "percentualReducaoIbsMun": 0.0,
+                    "percentualReducaoCbs": 0.0,
+                    "tiposDfeClassificacao": [{"sigla": "NFS-e"}],
+                },
+                {
+                    "codigo": "820099",
+                    "descricao": "Nova classificação teste",
+                    "descricaoTratamentoTributario": "Teste",
+                    "percentualReducaoIbsMun": 0.0,
+                    "percentualReducaoCbs": 0.0,
+                    "tiposDfeClassificacao": [{"sigla": "NFS-e"}],
+                },
+            ])
+        if "nbs/lista" in url:
+            return _FakeResp([
+                {"codigo": "115021000", "descricao": "Dev software"},
+                {"codigo": "199999999", "descricao": "NBS extra"},
+            ])
+        if "nfse/indicador-operacao" in url:
+            return _FakeResp([{"cIndOp": "100301", "localIncidencia": "Domicílio principal do adquirente", "localFornecimento": "Domicílio", "tipoOperacao": "Serviço"}])
+        if url.endswith("/rtc"):
+            return _FakeResp(text='<a href="anexo_viii-tabela-correlacao-v01-03-00.xlsx">A8</a><a href="anexovii-indop_ibscbs_v1-04-00.xlsx">A7</a>')
+        if "anexo_viii" in url:
+            return _FakeResp(content=buf8.getvalue())
+        if "anexovii" in url:
+            return _FakeResp(content=buf7.getvalue())
+        return _FakeResp(status_code=404)
+
+    try:
+        set_catalogs_dir(tmp_path)
+        with patch.object(catalog_updater.requests.Session, "get", side_effect=_fake_get):
+            res = catalog_updater.atualizar_catalogos_oficiais(destino_dir=tmp_path, force=True, validar_calculadora=False)
+            assert res["atualizado"] is True
+            assert res["metadados"]["versao_db"] == "V9999"
+            assert res["metadados"]["usando_override_externo"] is True
+            assert obter_cclasstrib("820099") is not None
+            assert obter_nbs("199999999")["fonte"] == "regra_geral"
+
+            # Segunda chamada sem force quando versão não mudou -> atualizado=False
+            res2 = catalog_updater.atualizar_catalogos_oficiais(destino_dir=tmp_path, force=False, validar_calculadora=False)
+            assert res2["atualizado"] is False
+    finally:
+        set_catalogs_dir(None)
 
 
 def test_pynfse_adn_tax_calculator_and_validator():
@@ -598,3 +708,75 @@ def test_pynfse_deep_coverage_builders_validators_and_danfse(sample_pfx: tuple[s
     ):
         brasao = _obter_ou_baixar_logo_prefeitura("CidadeFicticiaTeste", "ES")
         assert brasao is not None
+
+    # 8. Testa transição de layout NT 004 v2.0 <-> NT 009 v1.01, validação XSD dual e auto-fallback em E1235
+    from pynfse.adn import converter_xml_dps_layout_nt
+
+    xml_nt004 = build_dps_xml(
+        prestador={"cnpj": "19495981000113", "codigo_municipio": "3201308", "regime": "simples"},
+        tomador={"documento": "33335146000147", "razao_social": "AT DISTRIBUIDORA"},
+        servico={"cTribNac": "010701", "cNBS": "115013000", "descricao": "SUPORTE TI", "valor": 1.0, "aliquota_iss": 5.0},
+        versao_nt="nt004",
+    )
+    assert "<pTotTribSN>5.00</pTotTribSN>" in xml_nt004
+    assert "<pAliq>" not in xml_nt004
+    assert "<gIBSCBS>" in xml_nt004
+    assert XsdValidator.validar_dps(xml_nt004)["valido"] is True
+
+    xml_nt009 = build_dps_xml(
+        prestador={"cnpj": "19495981000113", "codigo_municipio": "3201308", "regime": "simples"},
+        tomador={"documento": "33335146000147", "razao_social": "AT DISTRIBUIDORA"},
+        servico={"cTribNac": "010701", "cNBS": "115013000", "descricao": "SUPORTE TI", "valor": 1.0, "aliquota_iss": 5.0},
+        versao_nt="nt009",
+    )
+    assert "<gIBSCBS>" not in xml_nt009
+    assert xml_nt009.index("<cNBS>") < xml_nt009.index("<xDescServ>")
+    assert xml_nt009.index("<finNFSe>") < xml_nt009.index("<cLocEmi>")
+    assert XsdValidator.validar_dps(xml_nt009)["valido"] is True
+
+    # Conversão bidirecional preserva integridade XSD
+    xml_back_to_004 = converter_xml_dps_layout_nt(xml_nt009, para_nt009=False)
+    assert "<gIBSCBS>" in xml_back_to_004
+    assert XsdValidator.validar_dps(xml_back_to_004)["valido"] is True
+
+    # Auto-fallback no AdnNfseClient quando a Sefin retorna E1235
+    signer_fb = DpsSigner(pfx_path=pfx_path, pfx_password=pfx_pwd)
+    client_fb = AdnNfseClient(
+        ambiente="homologacao",
+        cert_pem=signer_fb.get_pem_certificate(),
+        key_pem=signer_fb.get_pem_private_key(),
+    )
+    chave_fb = "32013082219495981000113000000000000126110047192931"
+
+    async def _test_e1235_autofallback():
+        mock_http_instance = AsyncMock()
+        mock_http_cm = AsyncMock()
+        mock_http_cm.__aenter__.return_value = mock_http_instance
+
+        res_e1235 = MagicMock()
+        res_e1235.status_code = 400
+        res_e1235.headers = {"content-type": "application/json"}
+        res_e1235.json.return_value = {
+            "erros": [
+                {
+                    "Codigo": "E1235",
+                    "Descricao": "Falha no esquema XML do DF-e.",
+                    "Complemento": "The element 'infDPS' has invalid child element 'cLocEmi'. Expected: 'finNFSe'.",
+                }
+            ]
+        }
+        res_ok = MagicMock()
+        res_ok.status_code = 201
+        res_ok.headers = {"content-type": "application/json"}
+        res_ok.json.return_value = {"chaveAcesso": chave_fb}
+        mock_http_instance.post.side_effect = [res_e1235, res_ok]
+
+        with patch("pynfse.adn.adn_client.httpx.AsyncClient", return_value=mock_http_cm):
+            signed_004 = signer_fb.sign_xml(xml_nt004, tag_to_sign="infDPS")
+            ret = await client_fb.emitir_dps(signed_004)
+            assert ret["sucesso"] is True
+            assert ret["chave_acesso"] == chave_fb
+            assert mock_http_instance.post.call_count == 2
+            assert "<gIBSCBS>" not in ret["dps_xml_assinado"]
+
+    asyncio.run(_test_e1235_autofallback())

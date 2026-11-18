@@ -1,0 +1,15 @@
+{
+  "versao_db": "V0073",
+  "data_versao_db": "2026-11-09",
+  "descricao_versao_db": "Nova tabela de Classificações Tributárias (IT 2025.002 v.1.71), publicada em 30/10/2026.",
+  "anexo_viii_versao": "anexo_viii-tabela-correlacao-v01-02-00-20261026.xlsx",
+  "anexo_vii_versao": "anexovii-indop_ibscbs_v1-03-00-nt009.xlsx",
+  "anexo_viii_url": "https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/rtc/anexo_viii-tabela-correlacao-v01-02-00-20261026.xlsx",
+  "anexo_vii_url": "https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/rtc/anexovii-indop_ibscbs_v1-03-00-nt009.xlsx",
+  "atualizado_em": "2026-11-18T18:52:38.922755+00:00",
+  "fontes": [
+    "https://piloto-cbs.tributos.gov.br/servico/calculadora-consumo/api (Calculadora Oficial IBS/CBS Receita Federal)",
+    "https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/rtc (Portal Nacional NFS-e - Anexos VII e VIII)"
+  ],
+  "calculadora_validada": true
+}

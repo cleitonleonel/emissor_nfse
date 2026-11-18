@@ -29,7 +29,7 @@ O repositório é dividido em camadas claras:
 
 ### 2. Fluxo de Emissão e Eventos via Sefin Nacional / ADN v1.01 (`pynfse.adn`)
 
-1. **Catálogos e Tributação**: `catalog_service` fornece os metadados de `cTribNac`, `cNBS`, `cIndOp`, `CST` e `cClassTrib`, enquanto `calcular_tributacao` e `validar_regras_ibscbs` aplicam as fórmulas da NT 1.101 (ISSQN, retenções federais e IBS/CBS).
+1. **Catálogos, Atualização Oficial e Tributação**: `catalog_service` fornece os metadados de `cTribNac`, 920 `cNBS`, 48 `cIndOp`, 18 `CST`, 173 `cClassTrib` e correlações do Anexo VIII (suportando override por `PYNFSE_CATALOGS_DIR`/`set_catalogs_dir`), `catalog_updater` sincroniza essas tabelas diretamente das APIs/planilhas oficiais da RFB e do Portal Nacional (`gov.br/nfse`), e `calcular_tributacao` / `validar_regras_ibscbs` aplicam as fórmulas da NT 1.101 (ISSQN, retenções federais e IBS/CBS).
 2. **Construção XML**: `build_dps_xml` (emissão/substituição) ou `build_evento_cancelamento_xml` / `build_evento_substituicao_xml` geram o XML no namespace oficial `http://www.sped.fazenda.gov.br/nfse` (definido em `pynfse.constants`).
 3. **Assinatura Digital**: `DpsSigner` assina a tag alvo (`infDPS` ou `infPedReg`) usando XML-DSig Enveloped (`rsa-sha256`) com o certificado ICP-Brasil A1.
 4. **Validação XSD Offline**: `XsdValidator` valida o XML assinado contra os schemas oficiais (`DPS_v1.01.xsd`, `pedRegEvento_v1.01.xsd`, `NFSe_v1.01.xsd`).
@@ -41,11 +41,12 @@ O repositório é dividido em camadas claras:
 emissor_nfse/
 ├── pynfse/
 │   ├── adn/
-│   │   ├── catalogs/          # Tabelas JSON (CST, cClassTrib, cTribNac, Anexo VIII, cIndOp)
+│   │   ├── catalogs/          # Tabelas JSON (CST, cClassTrib, NBS, cTribNac, Anexo VIII, cIndOp, metadata)
 │   │   ├── schemas_xsd/       # Schemas XSD oficiais v1.01
 │   │   ├── adn_client.py      # Cliente mTLS assíncrono (httpx2)
 │   │   ├── adn_signer.py      # Assinador XML-DSig (signxml + cryptography)
-│   │   ├── catalog_service.py # Consultas em memória aos catálogos
+│   │   ├── catalog_service.py # Consultas em memória aos catálogos + override externo
+│   │   ├── catalog_updater.py # Atualizador oficial RFB Dados Abertos + gov.br/nfse
 │   │   ├── dps_builder.py     # Construtor XML DPS v1.01
 │   │   ├── evento_builder.py  # Construtor XML de Eventos (e101101 / e105102)
 │   │   ├── schemas.py         # Schemas Pydantic v2 (DPS, Prestador, Tomador, Servico...)

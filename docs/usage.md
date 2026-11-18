@@ -179,3 +179,44 @@ asyncio.run(emitir())
 pytest -q
 ruff check .
 ```
+
+## Catálogos Oficiais IBS/CBS (NBS, `cClassTrib`, `cIndOp`) e Atualização
+
+A `pynfse` já vem com os catálogos oficiais embarcados em `pynfse/adn/catalogs/`, mas sistemas integradores podem gravar atualizações em um diretório externo gravável e sincronizar diretamente com a Receita Federal (`piloto-cbs.tributos.gov.br`) e o Portal Nacional (`gov.br/nfse`):
+
+```python
+from pynfse.adn import (
+    atualizar_catalogos_oficiais,
+    listar_nbs,
+    obter_metadados_catalogos,
+    set_catalogs_dir,
+    validar_combinacao_nbs,
+    verificar_atualizacao_oficial,
+)
+
+# Opcional: apontar para pasta gravável (também aceita env var PYNFSE_CATALOGS_DIR)
+set_catalogs_dir("/var/lib/meu_emissor/catalogs")
+
+print(obter_metadados_catalogos())
+print(len(listar_nbs()))  # 920 códigos NBS oficiais
+
+# Verificar se há nova versão na RFB / gov.br
+status = verificar_atualizacao_oficial()
+if status["precisa_atualizar"]:
+    resultado = atualizar_catalogos_oficiais()
+    print("Atualizado para:", resultado["metadados"]["versao_db"])
+
+# Validar combinação NBS x cClassTrib x cIndOp
+check = validar_combinacao_nbs("115021000", "000001", "100301")
+print(check)
+```
+
+Via linha de comando:
+
+```bash
+# Somente checar se há novidades oficiais
+python -m pynfse.adn.catalog_updater --check
+
+# Atualizar os JSONs no diretório de override (ou nos catálogos do pacote em dev)
+python -m pynfse.adn.catalog_updater --dir /caminho/para/catalogs
+```

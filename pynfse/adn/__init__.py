@@ -10,21 +10,33 @@ from pynfse.adn.adn_client import AdnNfseClient
 from pynfse.adn.adn_signer import DpsSigner
 from pynfse.adn.catalog_service import (
     buscar_correlacoes_anexo_viii,
+    get_catalogs_dir,
     listar_cclasstrib,
     listar_cst,
     listar_favoritos,
     listar_indop,
+    listar_nbs,
     listar_servicos_ctribnac,
     listar_subitens_lc116,
     obter_cclasstrib,
     obter_cst,
     obter_indop,
+    obter_metadados_catalogos,
+    obter_nbs,
     obter_servico_ctribnac,
+    reload_catalogs,
+    set_catalogs_dir,
+    validar_combinacao_nbs,
+)
+from pynfse.adn.catalog_updater import (
+    atualizar_catalogos_oficiais,
+    verificar_atualizacao_oficial,
 )
 from pynfse.adn.dps_builder import (
     build_dps_xml,
     build_dps_xml_from_schema,
     clean_digits,
+    converter_xml_dps_layout_nt,
     formatar_id_dps,
 )
 from pynfse.adn.evento_builder import (
@@ -56,6 +68,7 @@ __all__ = [
     "Substituicao",
     "build_dps_xml",
     "build_dps_xml_from_schema",
+    "converter_xml_dps_layout_nt",
     "clean_digits",
     "formatar_id_dps",
     "build_evento_cancelamento_xml",
@@ -72,5 +85,14 @@ __all__ = [
     "buscar_correlacoes_anexo_viii",
     "listar_indop",
     "obter_indop",
+    "listar_nbs",
+    "obter_nbs",
+    "validar_combinacao_nbs",
+    "obter_metadados_catalogos",
+    "set_catalogs_dir",
+    "get_catalogs_dir",
+    "reload_catalogs",
+    "atualizar_catalogos_oficiais",
+    "verificar_atualizacao_oficial",
     "listar_favoritos",
 ]

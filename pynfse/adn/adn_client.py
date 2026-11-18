@@ -150,15 +150,57 @@ class AdnNfseClient:
         except Exception as exc:
             return {"sucesso": False, "status_code": 500, "municipio": c_mun, "erro": str(exc)}
 
+    @staticmethod
+    def _is_e1235_layout_mismatch(corpo: Any) -> bool:
+        """Detecta se a rejeição E1235 da Sefin decorre da transição de schema entre NT 004 v2.0 e NT 009 v1.01."""
+        if not isinstance(corpo, dict):
+            return False
+        erros = corpo.get("erros") or corpo.get("Erros") or []
+        if not isinstance(erros, list):
+            return False
+        for err in erros:
+            if not isinstance(err, dict):
+                continue
+            cod = str(err.get("Codigo") or err.get("codigo") or "").upper()
+            comp = str(err.get("Complemento") or err.get("complemento") or err.get("Descricao") or "")
+            if cod == "E1235" and any(tag in comp for tag in ("finNFSe", "cLocEmi", "cNBS", "xDescServ", "gIBSCBS", "CST")):
+                return True
+        return False
+
+    def _reasinar_xml_com_certificado(self, xml_raw: str) -> str:
+        """Re-assina um XML `<DPS>` usando `self._signer` ou os bytes `self.cert_pem` / `self.key_pem`."""
+        if self._signer is not None:
+            return self._signer.sign_xml(xml_raw, tag_to_sign="infDPS")
+        if self.cert_pem and self.key_pem:
+            from cryptography import x509
+            from cryptography.hazmat.primitives.serialization import BestAvailableEncryption, load_pem_private_key, pkcs12
+            from pynfse.adn.adn_signer import DpsSigner
+
+            priv = load_pem_private_key(self.key_pem, password=None)
+            cert = x509.load_pem_x509_certificate(self.cert_pem)
+            temp_pfx = pkcs12.serialize_key_and_certificates(
+                name=b"adn_fallback",
+                key=priv,
+                cert=cert,
+                cas=None,
+                encryption_algorithm=BestAvailableEncryption(b"fallback"),
+            )
+            self._signer = DpsSigner(pfx_data=temp_pfx, pfx_password="fallback")
+            return self._signer.sign_xml(xml_raw, tag_to_sign="infDPS")
+        return xml_raw
+
     async def emitir_dps(self, dps_ou_xml: Any, enviar_gzip_json: bool = True) -> Dict[str, Any]:
-        """Submete a DPS (instância do schema `DPS` ou XML assinado) à Sefin Nacional / ADN."""
+        """Submete a DPS (instância do schema `DPS` ou XML assinado) à Sefin Nacional / ADN.
+
+        Inclui auto-fallback transparente para a transição entre NT 004 v2.0 e NT 009 v1.01 caso a Sefin
+        retorne `E1235` por divergência de posição de `<finNFSe>`, `<cNBS>` ou `<gIBSCBS>`.
+        """
+        from pynfse.adn.dps_builder import converter_xml_dps_layout_nt
         from pynfse.adn.schemas import DPS
 
         if isinstance(dps_ou_xml, DPS):
             xml_gerado = dps_ou_xml.to_xml()
-            xml_assinado = (
-                self._signer.sign_xml(xml_gerado, tag_to_sign="infDPS") if self._signer is not None else xml_gerado
-            )
+            xml_assinado = self._reasinar_xml_com_certificado(xml_gerado)
         else:
             xml_assinado = str(dps_ou_xml)
 
@@ -167,24 +209,42 @@ class AdnNfseClient:
 
         try:
             async with self._client_session() as client:
-                if enviar_gzip_json:
-                    res = await client.post(
-                        url,
-                        json={"dpsXmlGZipB64": dps_b64},
-                        headers={"Content-Type": "application/json", "Accept": "application/json"},
-                    )
-                else:
-                    res = await client.post(
-                        url,
-                        content=xml_assinado.encode("utf-8"),
-                        headers={
-                            "Content-Type": "application/xml; charset=utf-8",
-                            "Accept": "application/json, application/xml",
-                        },
-                    )
+                for tentativa_layout in range(2):
+                    if enviar_gzip_json:
+                        res = await client.post(
+                            url,
+                            json={"dpsXmlGZipB64": dps_b64},
+                            headers={"Content-Type": "application/json", "Accept": "application/json"},
+                        )
+                    else:
+                        res = await client.post(
+                            url,
+                            content=xml_assinado.encode("utf-8"),
+                            headers={
+                                "Content-Type": "application/xml; charset=utf-8",
+                                "Accept": "application/json, application/xml",
+                            },
+                        )
 
-                is_json = "application/json" in res.headers.get("content-type", "")
-                corpo = res.json() if is_json else res.text
+                    is_json = "application/json" in res.headers.get("content-type", "")
+                    corpo = res.json() if is_json else res.text
+
+                    # Auto-fallback transparente entre NT 004 v2.0 e NT 009 v1.01 quando o servidor SEFIN retorna E1235
+                    if tentativa_layout == 0 and res.status_code not in (200, 201) and self._is_e1235_layout_mismatch(corpo):
+                        try:
+                            had_signature = "<Signature" in xml_assinado
+                            xml_convertido = converter_xml_dps_layout_nt(xml_assinado, para_nt009=None)
+                            xml_assinado = (
+                                self._reasinar_xml_com_certificado(xml_convertido)
+                                if had_signature
+                                else xml_convertido
+                            )
+                            dps_b64 = self.compactar_xml_gzip_b64(xml_assinado)
+                            continue
+                        except Exception:
+                            pass
+                    break
+
                 nfse_xml = None
                 chave_acesso = None
                 if isinstance(corpo, dict):
@@ -202,6 +262,7 @@ class AdnNfseClient:
                     "ambiente": self.ambiente,
                     "chave_acesso": chave_acesso,
                     "nfse_xml": nfse_xml,
+                    "dps_xml_assinado": xml_assinado,
                     "dps_xml_gzip_b64": dps_b64,
                     "mensagem": (
                         "DPS recebida e NFS-e autorizada com sucesso pelo ADN/Sefin Nacional."

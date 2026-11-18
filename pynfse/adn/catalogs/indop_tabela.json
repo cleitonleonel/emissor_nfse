@@ -6,52 +6,213 @@
     "exige_imovel": false
   },
   {
+    "cIndOp": "010101",
+    "local_incidencia": "Estabelecimento do Prestador/Fornecedor",
+    "permite_zfm_alc": false,
+    "exige_imovel": false,
+    "tipo_operacao": "Bem Móvel Material",
+    "caracteristica": "Presencial, com retirada no estabelecimento do fornecedor",
+    "local_fornecimento": "Estabelecimento do fornecedor como o local da entrega ou disponibilização do bem ao destinatário",
+    "dispositivo_legal": "Art. 11, I",
+    "ind_nfse": true
+  },
+  {
+    "cIndOp": "010102",
+    "local_incidencia": "Local da Prestação",
+    "permite_zfm_alc": false,
+    "exige_imovel": false,
+    "tipo_operacao": "Bem Móvel Material",
+    "caracteristica": "Presencial, com retirada fora do estabelecimento do fornecedor",
+    "local_fornecimento": "Local da realização da operação e sua retirada",
+    "dispositivo_legal": "Art. 11, I",
+    "ind_nfse": true
+  },
+  {
+    "cIndOp": "010103",
+    "local_incidencia": "Endereço do Destinatário",
+    "permite_zfm_alc": false,
+    "exige_imovel": false,
+    "tipo_operacao": "Bem Móvel Material",
+    "caracteristica": "Não presencial, com entrega ou disponibilização em endereço fornecido",
+    "local_fornecimento": "Endereço do destinatário fornecido para entrega ou disponibilização (assim considerado o  destino final indicado pelo adquirente)",
+    "dispositivo_legal": "Art. 11, I e §1º, I",
+    "ind_nfse": true
+  },
+  {
+    "cIndOp": "010104",
+    "local_incidencia": "-",
+    "permite_zfm_alc": false,
+    "exige_imovel": false,
+    "tipo_operacao": "Bem Móvel Material",
+    "caracteristica": "Licitação promovida pelo poder público de bem apreendido ou abandonado ou leilão judicial",
+    "local_fornecimento": "Local onde se encontra o bem móvel material",
+    "dispositivo_legal": "Art. 11, I e §1º, III, \"a\"",
+    "ind_nfse": false
+  },
+  {
+    "cIndOp": "010105",
+    "local_incidencia": "-",
+    "permite_zfm_alc": false,
+    "exige_imovel": false,
+    "tipo_operacao": "Bem Móvel Material",
+    "caracteristica": "Constatação de irregularidade pela falta de documentação fiscal ou pelo acobertamento por documentação inidôneo",
+    "local_fornecimento": "Local onde se encontra o bem móvel material (Local da retirada)",
+    "dispositivo_legal": "Art. 11, I e §1º, III, \"b\"",
+    "ind_nfse": false
+  },
+  {
+    "cIndOp": "010106",
+    "local_incidencia": "Endereço do Tomador/Adquirente",
+    "permite_zfm_alc": false,
+    "exige_imovel": false,
+    "tipo_operacao": "Bem Móvel Material",
+    "caracteristica": "Locação de bem móvel material em aquisições realizadas de forma centralizada por contribuinte sujeito ao regime regular do IBS e da CBS que possui mais de um estabelecimento e que não estejam sujeitas a vedação à apropriação de créditos",
+    "local_fornecimento": "Local do domicílio principal do adquirente (estabelecimento matriz)",
+    "dispositivo_legal": "Art. 11, I e §4º",
+    "ind_nfse": true
+  },
+  {
+    "cIndOp": "010201",
+    "local_incidencia": "-",
+    "permite_zfm_alc": false,
+    "exige_imovel": false,
+    "tipo_operacao": "Aquisição de veículo automotor terrestre, aquático ou aéreo",
+    "caracteristica": "Entrega ou disponibilização do bem",
+    "local_fornecimento": "Domicílio principal do destinatário",
+    "dispositivo_legal": "Art. 11, I e §1º, II",
+    "ind_nfse": false
+  },
+  {
+    "cIndOp": "010202",
+    "local_incidencia": "-",
+    "permite_zfm_alc": false,
+    "exige_imovel": false,
+    "tipo_operacao": "Aquisição de veículo automotor em licitação promovida pelo poder público de bem apreendido ou abandonado ou leilão judicial",
+    "caracteristica": "Entrega ou disponibilização do bem",
+    "local_fornecimento": "Domicílio principal do destinatário",
+    "dispositivo_legal": "Art. 11, I e §1º, II",
+    "ind_nfse": false
+  },
+  {
     "cIndOp": "020101",
-    "local_incidencia": "local do imóvel",
+    "local_incidencia": "Localidade do Imóvel",
     "permite_zfm_alc": true,
-    "exige_imovel": true
+    "exige_imovel": true,
+    "tipo_operacao": "Operação com bem imóvel, bem móvel imaterial, inclusive direito, relacionada a bem imóvel",
+    "caracteristica": "Realização de operações com bem imóvel, bem imaterial, inclusive direito, relacionado a bem imóvel",
+    "local_fornecimento": "Localidade do imóvel",
+    "dispositivo_legal": "Art. 11, II e §2º",
+    "ind_nfse": true
+  },
+  {
+    "cIndOp": "020102",
+    "local_incidencia": "Localidade do Imóvel",
+    "permite_zfm_alc": false,
+    "exige_imovel": true,
+    "tipo_operacao": "Operação com bem imóvel, bem móvel imaterial, inclusive direito, relacionada a Bem Imóvel de Características Especiais (BICE)",
+    "caracteristica": "Realização de operações com bem imóvel, bem imaterial, inclusive direito, relacionado a bem imóvel de Características Especiais (BICE)",
+    "local_fornecimento": "Localidade do imóvel (BICE)",
+    "dispositivo_legal": "Art. 11, II e §2º",
+    "ind_nfse": true
   },
   {
     "cIndOp": "020201",
-    "local_incidencia": "local do imóvel",
+    "local_incidencia": "Localidade do Imóvel",
     "permite_zfm_alc": true,
-    "exige_imovel": true
+    "exige_imovel": true,
+    "tipo_operacao": "Serviço prestado fisicamente sobre bem imóvel",
+    "caracteristica": "Execução de serviços diversos prestados fisicamente sobre bem imóvel",
+    "local_fornecimento": "Localidade do imóvel",
+    "dispositivo_legal": "Art. 11, II e §2º",
+    "ind_nfse": true
+  },
+  {
+    "cIndOp": "020202",
+    "local_incidencia": "Localidade do Imóvel",
+    "permite_zfm_alc": false,
+    "exige_imovel": true,
+    "tipo_operacao": "Serviço prestado fisicamente sobre bem imóvel",
+    "caracteristica": "Execução de serviços sobre Bens Imóveis de Características Especiais (BICE)",
+    "local_fornecimento": "Localidade do imóvel (BICE)",
+    "dispositivo_legal": "Art. 11, II e §2º",
+    "ind_nfse": true
   },
   {
     "cIndOp": "020301",
-    "local_incidencia": "local do imóvel",
+    "local_incidencia": "Localidade do Imóvel",
     "permite_zfm_alc": true,
-    "exige_imovel": true
+    "exige_imovel": true,
+    "tipo_operacao": "Serviço de administração e intermediação de bem imóvel",
+    "caracteristica": "Execução dos serviços de administração e intermediação de bens imóveis",
+    "local_fornecimento": "Localidade do imóvel",
+    "dispositivo_legal": "Art. 11, II e §2º",
+    "ind_nfse": true
+  },
+  {
+    "cIndOp": "020401",
+    "local_incidencia": "Localidade do Imóvel",
+    "permite_zfm_alc": false,
+    "exige_imovel": true,
+    "tipo_operacao": "Serviços de locação, sublocação, arrendamento, direito de passagem ou permissão de uso, compartilhado ou não, de ferrovia, rodovia, postes, cabos, dutos e condutos de qualquer natureza (quando caracterize operação tributável pelo ISSQN)",
+    "caracteristica": "Execução de serviços sobre Bens Imóveis de Características Especiais (BICE)",
+    "local_fornecimento": "Localidade do imóvel (BICE)",
+    "dispositivo_legal": "Art. 11, II e §2º",
+    "ind_nfse": true
   },
   {
     "cIndOp": "030101",
-    "local_incidencia": "local da prestação",
+    "local_incidencia": "Estabelecimento do Prestador/Fornecedor",
     "permite_zfm_alc": true,
-    "exige_imovel": false
+    "exige_imovel": false,
+    "tipo_operacao": "Serviço prestado fisicamente sobre a pessoa ou fruído presencialmente por pessoa física",
+    "caracteristica": "Execução de serviços diversos exclusivamente prestados fisicamente sobre a pessoa ou integralmente fruídos presencialmente por pessoa física",
+    "local_fornecimento": "Estabelecimento do fornecedor como local da prestação",
+    "dispositivo_legal": "Art. 11, III",
+    "ind_nfse": true
   },
   {
     "cIndOp": "030102",
-    "local_incidencia": "local da prestação",
+    "local_incidencia": "Local da Prestação",
     "permite_zfm_alc": true,
-    "exige_imovel": false
+    "exige_imovel": false,
+    "tipo_operacao": "Serviço prestado fisicamente sobre a pessoa ou fruído presencialmente por pessoa física",
+    "caracteristica": "Execução de serviços diversos exclusivamente prestados fisicamente sobre a pessoa ou integralmente fruídos presencialmente por pessoa física",
+    "local_fornecimento": "Local da prestação do serviço diverso do estabelecimento do fornecedor",
+    "dispositivo_legal": "Art. 11, III",
+    "ind_nfse": true
   },
   {
     "cIndOp": "030103",
-    "local_incidencia": "local da prestação",
+    "local_incidencia": "Endereço do Destinatário",
     "permite_zfm_alc": false,
-    "exige_imovel": false
+    "exige_imovel": false,
+    "tipo_operacao": "Serviço prestado fisicamente sobre a pessoa ou fruído presencialmente por pessoa física",
+    "caracteristica": "",
+    "local_fornecimento": "Endereço do destinatário",
+    "dispositivo_legal": "",
+    "ind_nfse": true
   },
   {
     "cIndOp": "030104",
-    "local_incidencia": "local da prestação",
+    "local_incidencia": "Local da Prestação",
     "permite_zfm_alc": false,
-    "exige_imovel": false
+    "exige_imovel": false,
+    "tipo_operacao": "Serviço prestado fisicamente sobre a pessoa ou fruído presencialmente por pessoa física",
+    "caracteristica": "",
+    "local_fornecimento": "Endereço diverso do fornecedor, adquirente ou destinatário",
+    "dispositivo_legal": "",
+    "ind_nfse": true
   },
   {
     "cIndOp": "040101",
-    "local_incidencia": "local do evento",
+    "local_incidencia": "Local do Evento",
     "permite_zfm_alc": false,
-    "exige_imovel": false
+    "exige_imovel": false,
+    "tipo_operacao": "Serviço de planejamento, organização e administração de feiras, exposições, congressos, espetáculos, exibições e congêneres",
+    "caracteristica": "Execução de serviços de planejamento, organização e administração de feiras, exposições, congressos, espetáculos, exibições e congêneres",
+    "local_fornecimento": "Local do evento a que se refere o serviço",
+    "dispositivo_legal": "Art. 11, IV",
+    "ind_nfse": true
   },
   {
     "cIndOp": "050100",
@@ -61,39 +222,69 @@
   },
   {
     "cIndOp": "050101",
-    "local_incidencia": "local da prestação",
+    "local_incidencia": "Estabelecimento do Prestador/Fornecedor",
     "permite_zfm_alc": true,
-    "exige_imovel": false
+    "exige_imovel": false,
+    "tipo_operacao": "Serviço prestado fisicamente sobre bem móvel material",
+    "caracteristica": "Execução de serviços diversos prestados fisicamente sobre bem móvel material",
+    "local_fornecimento": "Estabelecimento do fornecedor como local da prestação",
+    "dispositivo_legal": "Art. 11, V",
+    "ind_nfse": true
   },
   {
     "cIndOp": "050102",
-    "local_incidencia": "local da prestação",
+    "local_incidencia": "Local da Prestação",
     "permite_zfm_alc": true,
-    "exige_imovel": false
+    "exige_imovel": false,
+    "tipo_operacao": "Serviço prestado fisicamente sobre bem móvel material",
+    "caracteristica": "Execução de serviços diversos prestados fisicamente sobre bem móvel material",
+    "local_fornecimento": "Local da prestação do serviço diverso do estabelecimento do fornecedor",
+    "dispositivo_legal": "Art. 11, V",
+    "ind_nfse": true
   },
   {
     "cIndOp": "050103",
-    "local_incidencia": "local da prestação",
+    "local_incidencia": "Endereço do Destinatário",
     "permite_zfm_alc": false,
-    "exige_imovel": false
+    "exige_imovel": false,
+    "tipo_operacao": "Serviço prestado fisicamente sobre bem móvel material",
+    "caracteristica": "",
+    "local_fornecimento": "Endereço do destinatário",
+    "dispositivo_legal": "",
+    "ind_nfse": true
   },
   {
     "cIndOp": "050104",
-    "local_incidencia": "local da prestação",
+    "local_incidencia": "Local da Prestação",
     "permite_zfm_alc": false,
-    "exige_imovel": false
+    "exige_imovel": false,
+    "tipo_operacao": "Serviço prestado fisicamente sobre bem móvel material",
+    "caracteristica": "",
+    "local_fornecimento": "Endereço diverso do fornecedor, adquirente ou destinatário",
+    "dispositivo_legal": "",
+    "ind_nfse": true
   },
   {
     "cIndOp": "050201",
-    "local_incidencia": "local da prestação",
+    "local_incidencia": "Local da Prestação",
     "permite_zfm_alc": true,
-    "exige_imovel": false
+    "exige_imovel": false,
+    "tipo_operacao": "Serviços portuários",
+    "caracteristica": "Execução de serviços portuários",
+    "local_fornecimento": "Local do porto como local da prestação",
+    "dispositivo_legal": "Art. 11, V",
+    "ind_nfse": true
   },
   {
     "cIndOp": "060101",
-    "local_incidencia": "local da prestação",
+    "local_incidencia": "Local da Prestação (Início do Transporte)",
     "permite_zfm_alc": true,
-    "exige_imovel": false
+    "exige_imovel": false,
+    "tipo_operacao": "Serviço de transporte de passageiros",
+    "caracteristica": "Execução de serviços de transporte de passageiros",
+    "local_fornecimento": "Local de início do transporte",
+    "dispositivo_legal": "Art. 11, VI",
+    "ind_nfse": true
   },
   {
     "cIndOp": "070100",
@@ -102,64 +293,213 @@
     "exige_imovel": false
   },
   {
-    "cIndOp": "080101",
-    "local_incidencia": "via explorada",
+    "cIndOp": "070101",
+    "local_incidencia": "Local da Prestação",
     "permite_zfm_alc": false,
-    "exige_imovel": false
+    "exige_imovel": false,
+    "tipo_operacao": "Serviço de transporte de carga",
+    "caracteristica": "Execução de serviço de transporte de carga",
+    "local_fornecimento": "Endereço fornecido para entrega do bem",
+    "dispositivo_legal": "Art. 11, VII",
+    "ind_nfse": true
+  },
+  {
+    "cIndOp": "070102",
+    "local_incidencia": "Local da Prestação (Local da Retirada)",
+    "permite_zfm_alc": false,
+    "exige_imovel": false,
+    "tipo_operacao": "Serviço de transporte de carga",
+    "caracteristica": "Execução de serviço de transporte de carga",
+    "local_fornecimento": "Local da retirada do bem",
+    "dispositivo_legal": "Art. 11, VII",
+    "ind_nfse": true
+  },
+  {
+    "cIndOp": "080101",
+    "local_incidencia": "Localização do Trecho (NFS-e Via)",
+    "permite_zfm_alc": false,
+    "exige_imovel": false,
+    "tipo_operacao": "Serviço de exploração de via",
+    "caracteristica": "Execução de serviços de exploração de via",
+    "local_fornecimento": "Local da prestação correspondente à extensão da via explorada, proporcionalmente ao território dos entes tributantes",
+    "dispositivo_legal": "Art. 11, VIII",
+    "ind_nfse": false
+  },
+  {
+    "cIndOp": "090101",
+    "local_incidencia": "-",
+    "permite_zfm_alc": false,
+    "exige_imovel": false,
+    "tipo_operacao": "Serviço de telefonia fixa e demais serviços de comunicação prestados por meio de cabos, fios, fibras e meios similares",
+    "caracteristica": "Execução de serviços de telefonia fixa e demais serviços de comunicação prestados por meio de cabos, fios, fibras e meios similares",
+    "local_fornecimento": "Local de instalação do terminal",
+    "dispositivo_legal": "Art. 11, IX",
+    "ind_nfse": false
+  },
+  {
+    "cIndOp": "090102",
+    "local_incidencia": "-",
+    "permite_zfm_alc": false,
+    "exige_imovel": false,
+    "tipo_operacao": "Serviço de telefonia fixa e demais serviços de comunicação prestados por meio de cabos, fios, fibras e meios similares",
+    "caracteristica": "Execução de serviços de telefonia fixa e demais serviços de comunicação prestados por meio de cabos, fios, fibras e meios similares",
+    "local_fornecimento": "Local do domicílio principal do adquirente (assim considerada a matriz), nas aquisições realizadas de forma centralizada por contribuinte sujeito ao regime regular do IBS e da CBS que possui mais de um estabelecimento e que não estejam sujeitas a vedação à apropriação de créditos",
+    "dispositivo_legal": "Art. 11, IX e §4º, I e II",
+    "ind_nfse": false
   },
   {
     "cIndOp": "100101",
-    "local_incidencia": "Domicílio principal do adquirente",
+    "local_incidencia": "Endereço do Tomador/Adquirente",
     "permite_zfm_alc": false,
-    "exige_imovel": false
+    "exige_imovel": false,
+    "tipo_operacao": "Cessão de espaço para prestação de serviços publicitários, em operações onerosas",
+    "caracteristica": "Realização de operações de cessão de espaço para prestação de serviços publicitários",
+    "local_fornecimento": "Local do domicílio principal do adquirente residente ou domiciliado no País. Nas aquisições indicadas no art. 11, §4º, II, considera-se domicílio principal do adquirente o estabelecimento matriz",
+    "dispositivo_legal": "Art. 11, X, \"a\", 1 e §º 11",
+    "ind_nfse": true
   },
   {
     "cIndOp": "100102",
-    "local_incidencia": "Domicílio principal do adquirente (Prestação onerosa - Adquirente no Exterior)",
+    "local_incidencia": "Endereço do Destinatário",
     "permite_zfm_alc": false,
-    "exige_imovel": false
+    "exige_imovel": false,
+    "tipo_operacao": "Cessão de espaço para prestação de serviços publicitários, em operações onerosas",
+    "caracteristica": "Realização de operações de cessão de espaço para prestação de serviços publicitários",
+    "local_fornecimento": "Local do domicílio principal do destinatário residente ou domiciliado no País, caso o adquirente não seja residente ou domiciliado no País",
+    "dispositivo_legal": "Art. 11, X, \"a\", 2 e §º11",
+    "ind_nfse": true
   },
   {
     "cIndOp": "100201",
-    "local_incidencia": "Domicílio principal do destinatário (Prestação não onerosa - Adquirente no País)",
+    "local_incidencia": "Endereço do Destinatário",
     "permite_zfm_alc": false,
-    "exige_imovel": false
+    "exige_imovel": false,
+    "tipo_operacao": "Cessão de espaço para prestação de serviços publicitários, em operações não onerosas",
+    "caracteristica": "Realização de operações de cessão de espaço para prestação de serviços publicitários",
+    "local_fornecimento": "local do domicílio principal do destinatário residente ou domiciliado no País",
+    "dispositivo_legal": "Art. 11, X, \"b\" e §º11",
+    "ind_nfse": true
   },
   {
     "cIndOp": "100301",
-    "local_incidencia": "Domicílio principal do adquirente",
+    "local_incidencia": "Endereço do Tomador/Adquirente",
     "permite_zfm_alc": true,
-    "exige_imovel": false
+    "exige_imovel": false,
+    "tipo_operacao": "Demais serviços, em operações onerosas",
+    "caracteristica": "Execução dos demais serviços em operações não especificadas em outros indicadores ou, nos serviços de que trata o inc. III do art. 11, esses sejam, ainda que parcialmente, prestados à distância",
+    "local_fornecimento": "Local do domicílio principal do adquirente residente ou domiciliado no País. Nas aquisições indicadas no art. 11, §4º, II, considera-se domicílio principal do adquirente o estabelecimento matriz",
+    "dispositivo_legal": "Art. 11, X, \"a\", 1 e §§4º, II e 5º",
+    "ind_nfse": true
   },
   {
     "cIndOp": "100302",
-    "local_incidencia": "Domicílio principal do adquirente (Adquirente no Exterior)",
+    "local_incidencia": "Endereço do Destinatário",
     "permite_zfm_alc": true,
-    "exige_imovel": false
+    "exige_imovel": false,
+    "tipo_operacao": "Demais serviços, em operações onerosas",
+    "caracteristica": "Execução dos demais serviços em operações não especificadas em outros indicadores ou, nos serviços de que trata o inc. III do art. 11, esses sejam, ainda que parcialmente, prestados à distância",
+    "local_fornecimento": "Local do domicílio principal do destinatário residente ou domiciliado no País, caso o adquirente não seja residente ou domiciliado no País",
+    "dispositivo_legal": "Art. 11, X, \"a\", 2 e §º5",
+    "ind_nfse": true
   },
   {
     "cIndOp": "100401",
-    "local_incidencia": "Domicílio principal do destinatário (Prestação não onerosa)",
+    "local_incidencia": "Endereço do Destinatário",
     "permite_zfm_alc": true,
-    "exige_imovel": false
+    "exige_imovel": false,
+    "tipo_operacao": "Demais serviços, em operações não onerosas",
+    "caracteristica": "Execução dos demais serviços em operações não especificadas em outros indicadores ou, nos serviços de que tratam o inc. III, estes sejam, ainda que parcialmente, prestados à distância",
+    "local_fornecimento": "local do domicílio principal do destinatário residente ou domiciliado no País",
+    "dispositivo_legal": "Art. 11, X, \"b\" e §º5",
+    "ind_nfse": true
   },
   {
     "cIndOp": "100501",
-    "local_incidencia": "Domicílio principal do adquirente",
+    "local_incidencia": "Endereço do Tomador/Adquirente",
     "permite_zfm_alc": true,
-    "exige_imovel": false
+    "exige_imovel": false,
+    "tipo_operacao": "Demais bens, em operações onerosas",
+    "caracteristica": "Realização de demais operações com bens não especificadas em outros indicadores",
+    "local_fornecimento": "Local do domicílio principal do adquirente residente ou domiciliado no País. Nas aquisições indicadas no art. 11, §4º, II, considera-se domicílio principal do adquirente o estabelecimento matriz",
+    "dispositivo_legal": "Art. 11, X, \"a\", 1 e §4º, II",
+    "ind_nfse": true
   },
   {
     "cIndOp": "100502",
-    "local_incidencia": "Domicílio principal do adquirente (Adquirente no Exterior)",
+    "local_incidencia": "Endereço do Destinatário",
     "permite_zfm_alc": true,
-    "exige_imovel": false
+    "exige_imovel": false,
+    "tipo_operacao": "Demais bens, em operações onerosas",
+    "caracteristica": "Realização de demais operações com bens não especificadas em outros indicadores",
+    "local_fornecimento": "Local do domicílio principal do destinatário residente ou domiciliado no País, caso o adquirente não seja residente ou domiciliado no País",
+    "dispositivo_legal": "Art. 11, X, \"a\", 2",
+    "ind_nfse": true
   },
   {
     "cIndOp": "100601",
-    "local_incidencia": "Domicílio principal do destinatário (Prestação não onerosa)",
+    "local_incidencia": "Endereço do Destinatário",
     "permite_zfm_alc": true,
-    "exige_imovel": false
+    "exige_imovel": false,
+    "tipo_operacao": "Demais bens, em operações não onerosas",
+    "caracteristica": "Realização de demais operações com bens não especificadas em outros indicadores",
+    "local_fornecimento": "local do domicílio principal do destinatário residente ou domiciliado no País",
+    "dispositivo_legal": "Art. 11, X, \"b\"",
+    "ind_nfse": true
+  },
+  {
+    "cIndOp": "110101",
+    "local_incidencia": "-",
+    "permite_zfm_alc": false,
+    "exige_imovel": false,
+    "tipo_operacao": "Operações com abastecimento de água, gás canalizado e energia elétrica",
+    "caracteristica": "Operações destinadas a consumo",
+    "local_fornecimento": "Local da entrega ou disponibilização",
+    "dispositivo_legal": "Art. 11, §7º, I",
+    "ind_nfse": false
+  },
+  {
+    "cIndOp": "110201",
+    "local_incidencia": "-",
+    "permite_zfm_alc": false,
+    "exige_imovel": false,
+    "tipo_operacao": "Operações com abastecimento de água, gás canalizado e energia elétrica",
+    "caracteristica": "Operações que não envolvam efetivo consumo: a) no fornecimento de serviços de transmissão de energia elétrica; e b) nas demais operações, inclusive nas hipóteses de geração, distribuição ou comercialização de energia elétrica.",
+    "local_fornecimento": "Local do estabelecimento principal do adquirente (assim considerada a matriz), conforme §4º do art. 11",
+    "dispositivo_legal": "Art. 11, §7º, II",
+    "ind_nfse": false
+  },
+  {
+    "cIndOp": "120101",
+    "local_incidencia": "-",
+    "permite_zfm_alc": false,
+    "exige_imovel": false,
+    "tipo_operacao": "Nas aquisições de energia elétrica realizadas de forma multilateral",
+    "caracteristica": "Disponibilização de energia elétrica",
+    "local_fornecimento": "Local do estabelecimento do agente ou de seus representados que figurem na posição devedora da liquidação financeira apurada pela Câmara de Comercialização de Energia Elétrica",
+    "dispositivo_legal": "Art. 11, §9º",
+    "ind_nfse": false
+  },
+  {
+    "cIndOp": "130101",
+    "local_incidencia": "-",
+    "permite_zfm_alc": false,
+    "exige_imovel": false,
+    "tipo_operacao": "Operações de transporte dutoviário de gás natural",
+    "caracteristica": "Execução do transporte dutoviário de gás natural, na contratação de capacidade de entrada de gás natural do duto, nos termos da legislação aplicável",
+    "local_fornecimento": "Local do estabelecimento principal do fornecedor",
+    "dispositivo_legal": "Art. 11, §10, I",
+    "ind_nfse": false
+  },
+  {
+    "cIndOp": "130201",
+    "local_incidencia": "-",
+    "permite_zfm_alc": false,
+    "exige_imovel": false,
+    "tipo_operacao": "Operações de transporte dutoviário de gás natural",
+    "caracteristica": "Execução do transporte dutoviário de gás natural, na contratação de capacidade de saída do gás natural do duto",
+    "local_fornecimento": "Local do estabelecimento principal do adquirente",
+    "dispositivo_legal": "Art. 11, §10, II",
+    "ind_nfse": false
   },
   {
     "cIndOp": "301001",

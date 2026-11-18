@@ -592,6 +592,7 @@ def calcular_tributacao(
     return {
         "ano_competencia": ano,
         "regime_prestador": regime,
+        "p_tot_trib_sn": round(aliquota_iss, 2) if regime == "simples" else None,
         "valor_servicos": v_serv,
         "desconto_incondicionado": v_desc_incond,
         "desconto_condicionado": v_desc_cond,

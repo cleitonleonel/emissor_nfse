@@ -6,6 +6,7 @@ Opera diretamente sobre os schemas Pydantic v2 (`DPS`, `Prestador`, `Tomador`, `
 
 from __future__ import annotations
 
+from datetime import date
 from typing import Any, Dict, Optional
 
 from lxml import etree
@@ -49,6 +50,121 @@ def formatar_id_dps(
     serie_num = clean_digits(serie_dps or "900").zfill(5)[:5]
     n_dps = clean_digits(numero_dps or 1).zfill(15)[:15]
     return f"DPS{c_mun}{tp_insc}{insc_fed}{serie_num}{n_dps}"
+
+
+def _resolver_layout_nt009(versao_nt: Optional[str], tp_amb: str) -> bool:
+    """Resolve se deve construir o XML da DPS conforme o layout NT 009 v1.01 (True) ou NT 004 v2.0 (False).
+
+    - Se `versao_nt == "nt009"`: retorna True (força layout NT 009 v1.01).
+    - Se `versao_nt == "nt004"`: retorna False (força layout NT 004 v2.0).
+    - Se `versao_nt == "auto"` (ou None): usa NT 004 v2.0 até 30/11/2026 e vira automaticamente para
+      NT 009 v1.01 em Produção a partir de 01/12/2026 (enquanto na transmissão mTLS o `AdnNfseClient`
+      aplica auto-fallback transparente caso o servidor SEFIN de Homologação ou Produção exija o outro layout).
+    """
+    v = (versao_nt or "auto").strip().lower()
+    if v in ("nt009", "009", "1.01-nt009"):
+        return True
+    if v in ("nt004", "004", "1.01-nt004"):
+        return False
+    return date.today() >= date(2026, 12, 1) and tp_amb == "1"
+
+
+def converter_xml_dps_layout_nt(xml_str: str, para_nt009: Optional[bool] = None) -> str:
+    """Converte um XML `<DPS>` entre o layout NT 004 v2.0 e o layout NT 009 v1.01 preservando todos os dados.
+
+    Se `para_nt009` for None, detecta automaticamente o layout atual do XML e inverte para o outro:
+    - Layout NT 004 v2.0: `<finNFSe>` dentro de `<IBSCBS>`, `<xDescServ>` antes de `<cNBS>`, e `<gIBSCBS>` envolvendo `<CST>`/`<cClassTrib>`.
+    - Layout NT 009 v1.01: `<finNFSe>` dentro de `<infDPS>` (antes de `<cLocEmi>`), `<cNBS>` antes de `<xDescServ>`, e `<CST>`/`<cClassTrib>` diretos em `<trib>`.
+    """
+    parser = etree.XMLParser(remove_blank_text=True)
+    root = etree.fromstring(xml_str.encode("utf-8"), parser=parser)
+
+    # Remove assinatura anterior se existir (para ser re-assinado após a conversão)
+    for sig in root.xpath(".//*[local-name()='Signature']"):
+        parent = sig.getparent()
+        if parent is not None:
+            parent.remove(sig)
+
+    inf_dps = root.find(f"{{{NS_NFSE}}}infDPS")
+    if inf_dps is None:
+        return xml_str
+
+    fin_in_inf = inf_dps.find(f"{{{NS_NFSE}}}finNFSe")
+    is_currently_nt009 = fin_in_inf is not None
+    target_nt009 = (not is_currently_nt009) if para_nt009 is None else bool(para_nt009)
+
+    ibscbs = inf_dps.find(f"{{{NS_NFSE}}}IBSCBS")
+    c_serv = inf_dps.find(f".//{{{NS_NFSE}}}cServ")
+
+    if target_nt009:
+        # 1. <finNFSe> em <infDPS> antes de <cLocEmi>
+        fin_val = "0"
+        if ibscbs is not None:
+            fin_in_ibs = ibscbs.find(f"{{{NS_NFSE}}}finNFSe")
+            if fin_in_ibs is not None:
+                fin_val = fin_in_ibs.text or "0"
+                ibscbs.remove(fin_in_ibs)
+        if fin_in_inf is None:
+            c_loc = inf_dps.find(f"{{{NS_NFSE}}}cLocEmi")
+            fin_el = etree.Element(f"{{{NS_NFSE}}}finNFSe")
+            fin_el.text = fin_val
+            if c_loc is not None:
+                inf_dps.insert(list(inf_dps).index(c_loc), fin_el)
+            else:
+                inf_dps.append(fin_el)
+
+        # 2. <cNBS> antes de <xDescServ> dentro de <cServ>
+        if c_serv is not None:
+            x_desc = c_serv.find(f"{{{NS_NFSE}}}xDescServ")
+            c_nbs = c_serv.find(f"{{{NS_NFSE}}}cNBS")
+            if x_desc is not None and c_nbs is not None:
+                children = list(c_serv)
+                if children.index(c_nbs) > children.index(x_desc):
+                    c_serv.remove(c_nbs)
+                    c_serv.insert(list(c_serv).index(x_desc), c_nbs)
+
+        # 3. <CST> e <cClassTrib> filhos diretos de <IBSCBS><valores><trib>
+        if ibscbs is not None:
+            trib_ibs = ibscbs.find(f".//{{{NS_NFSE}}}trib")
+            if trib_ibs is not None:
+                g_ibs = trib_ibs.find(f"{{{NS_NFSE}}}gIBSCBS")
+                if g_ibs is not None:
+                    for child in list(g_ibs):
+                        g_ibs.remove(child)
+                        trib_ibs.append(child)
+                    trib_ibs.remove(g_ibs)
+    else:
+        # 1. <finNFSe> dentro de <IBSCBS> como primeiro filho
+        fin_val = "0"
+        if fin_in_inf is not None:
+            fin_val = fin_in_inf.text or "0"
+            inf_dps.remove(fin_in_inf)
+        if ibscbs is not None and ibscbs.find(f"{{{NS_NFSE}}}finNFSe") is None:
+            fin_el = etree.Element(f"{{{NS_NFSE}}}finNFSe")
+            fin_el.text = fin_val
+            ibscbs.insert(0, fin_el)
+
+        # 2. <xDescServ> antes de <cNBS> dentro de <cServ>
+        if c_serv is not None:
+            x_desc = c_serv.find(f"{{{NS_NFSE}}}xDescServ")
+            c_nbs = c_serv.find(f"{{{NS_NFSE}}}cNBS")
+            if x_desc is not None and c_nbs is not None:
+                children = list(c_serv)
+                if children.index(x_desc) > children.index(c_nbs):
+                    c_serv.remove(x_desc)
+                    c_serv.insert(list(c_serv).index(c_nbs), x_desc)
+
+        # 3. <gIBSCBS> envolvendo <CST> e <cClassTrib> dentro de <IBSCBS><valores><trib>
+        if ibscbs is not None:
+            trib_ibs = ibscbs.find(f".//{{{NS_NFSE}}}trib")
+            if trib_ibs is not None and trib_ibs.find(f"{{{NS_NFSE}}}gIBSCBS") is None:
+                g_ibs = etree.Element(f"{{{NS_NFSE}}}gIBSCBS")
+                for child in list(trib_ibs):
+                    trib_ibs.remove(child)
+                    g_ibs.append(child)
+                trib_ibs.append(g_ibs)
+
+    return etree.tostring(root, encoding="utf-8", xml_declaration=True, pretty_print=True).decode("utf-8").strip()
 
 
 def build_dps_xml_from_schema(dps: DPS) -> str:
@@ -239,7 +355,10 @@ def build_dps_xml_from_schema(dps: DPS) -> str:
     tp_ret_issqn = str(iss_data.get("tp_ret_issqn") or (2 if iss_data.get("retido") else 1))
     _sub(trib_mun_el, "tpRetISSQN", tp_ret_issqn)
     p_aliq_iss = iss_data.get("aliquota")
-    if p_aliq_iss is not None and float(p_aliq_iss) > 0 and op_sn != "2":
+    reg_ap_sn = str(prestador.reg_ap_trib_sn or "1")
+    if p_aliq_iss is not None and float(p_aliq_iss) > 0 and op_sn not in ("2", "3"):
+        _sub(trib_mun_el, "pAliq", f"{float(p_aliq_iss):.2f}")
+    elif p_aliq_iss is not None and float(p_aliq_iss) > 0 and op_sn == "3" and reg_ap_sn != "1":
         _sub(trib_mun_el, "pAliq", f"{float(p_aliq_iss):.2f}")
 
     # Tributos Federais (<tribFed>)
@@ -273,8 +392,11 @@ def build_dps_xml_from_schema(dps: DPS) -> str:
     tot_trib_el = _sub(trib_el, "totTrib")
     if op_sn == "2":
         _sub(tot_trib_el, "indTotTrib", "0")
-    elif op_sn == "3" and tributacao.get("p_tot_trib_sn") is not None:
-        _sub(tot_trib_el, "pTotTribSN", f"{float(tributacao['p_tot_trib_sn']):.2f}")
+    elif op_sn == "3":
+        p_tot_sn = tributacao.get("p_tot_trib_sn")
+        if p_tot_sn is None:
+            p_tot_sn = iss_data.get("aliquota") if iss_data.get("aliquota") is not None else 2.0
+        _sub(tot_trib_el, "pTotTribSN", f"{float(p_tot_sn):.2f}")
     elif tributacao.get("v_tot_trib"):
         vt = tributacao["v_tot_trib"]
         v_tot_el = _sub(tot_trib_el, "vTotTrib")
@@ -348,7 +470,10 @@ def build_dps_xml_from_schema(dps: DPS) -> str:
             _sub(g_dif_el, "pDifCBS", f"{p_dif_cbs:.2f}")
 
     xml_bytes = etree.tostring(root, encoding="utf-8", xml_declaration=True, pretty_print=True)
-    return xml_bytes.decode("utf-8").strip()
+    xml_out = xml_bytes.decode("utf-8").strip()
+    if _resolver_layout_nt009(getattr(dps, "versao_nt", "auto"), tp_amb):
+        return converter_xml_dps_layout_nt(xml_out, para_nt009=True)
+    return xml_out
 
 
 def build_dps_xml(
@@ -365,6 +490,7 @@ def build_dps_xml(
     intermediario: Optional[Intermediario | Dict[str, Any]] = None,
     incluir_ibscbs: bool = True,
     versao_aplicativo: str = "NFSeManager-1.01",
+    versao_nt: str = "auto",
 ) -> str:
     """Gera o XML da DPS v1.01 validando os parâmetros via schema Pydantic `DPS`."""
     if isinstance(prestador, DPS):
@@ -397,5 +523,6 @@ def build_dps_xml(
         or "homologacao",
         incluir_ibscbs=incluir_ibscbs,
         versao_aplicativo=versao_aplicativo,
+        versao_nt=versao_nt,
     )
     return build_dps_xml_from_schema(dps_schema)
