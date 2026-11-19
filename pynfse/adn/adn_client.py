@@ -173,7 +173,12 @@ class AdnNfseClient:
             return self._signer.sign_xml(xml_raw, tag_to_sign="infDPS")
         if self.cert_pem and self.key_pem:
             from cryptography import x509
-            from cryptography.hazmat.primitives.serialization import BestAvailableEncryption, load_pem_private_key, pkcs12
+            from cryptography.hazmat.primitives.serialization import (
+                BestAvailableEncryption,
+                load_pem_private_key,
+                pkcs12,
+            )
+
             from pynfse.adn.adn_signer import DpsSigner
 
             priv = load_pem_private_key(self.key_pem, password=None)
